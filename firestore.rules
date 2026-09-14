@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isQualityCoordinator() {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email in [
+          'jjfrancop22@hotmail.com',
+          'jfrancop22@hotmail.com'
+        ];
+    }
+    function docIsSigned(data) {
+      return ('signature' in data)
+        && data.signature is map
+        && ('signed' in data.signature)
+        && data.signature.signed == true;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    match /equipment/{equipmentId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /equipmentDocuments/{documentId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && (!docIsSigned(request.resource.data) || isQualityCoordinator());
+
+      // V0.7.8: flujo documental técnico rígido.
+      // 1) Mientras NO está firmado, cualquier usuario autenticado puede completar/actualizar.
+      // 2) La transición NO FIRMADO -> FIRMADO solo la puede hacer el Coordinador de Calidad.
+      // 3) Una vez firmado, el contenido es inmutable; solo puede cambiar estado documental.
+      allow update: if signedIn() && (
+        (!docIsSigned(resource.data) && !docIsSigned(request.resource.data))
+        || (!docIsSigned(resource.data) && docIsSigned(request.resource.data) && isQualityCoordinator())
+        || (docIsSigned(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','supersededReason','supersededAt','supersededBy',
+              'updatedAt','updatedBy','updatedByEmail'
+            ]))
+      );
+      allow delete: if false;
+    }
+
+    match /equipmentDocumentChunks/{chunkId} {
+      allow read, create: if signedIn();
+      allow update: if false;
+      // Reemplazo del binario solo mientras el padre aún NO esté firmado.
+      allow delete: if signedIn()
+        && exists(/databases/$(database)/documents/equipmentDocuments/$(resource.data.documentId))
+        && !docIsSigned(get(/databases/$(database)/documents/equipmentDocuments/$(resource.data.documentId)).data);
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.actorUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /catalogs/{catalogId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /system/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /metrologyProgram/{programId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /maintenanceTemplates/{templateId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /notifications/{docId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+
+
+    match /calibrationDrafts/{draftId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
+    match /operationsHistory/{eventId} {
+      allow read, create: if signedIn();
+      // Solo eventos manuales pueden corregirse; la evidencia automática se corrige en su módulo de origen.
+      allow update: if signedIn()
+        && resource.data.source == 'MANUAL_HISTORY'
+        && request.resource.data.source == 'MANUAL_HISTORY'
+        && request.resource.data.equipmentId == resource.data.equipmentId;
+      allow delete: if false;
+    }
+  }
+}

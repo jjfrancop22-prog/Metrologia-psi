@@ -1,0 +1,13 @@
+{
+  "name": "ERP Metrológico NextGen",
+  "short_name": "ERP Metrológico",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0f2741",
+  "description": "ERP metrológico para gestión de equipos, trazabilidad y control metrológico.",
+  "icons": [
+    {"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}

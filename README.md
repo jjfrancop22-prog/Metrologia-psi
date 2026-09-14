@@ -1,0 +1,62 @@
+## V1.1.97 — Programa de Mantenimiento Inteligente IA
+
+- Nuevo Programa de Mantenimiento separado en Interno preventivo y Externo/Correctivo.
+- Interno: calendario anual, programado vs ejecutado, cumplimiento, frecuencia IA PG0416 y trazabilidad.
+- Externo/correctivo: flujo solicitud-cotización-aprobación-programación-servicio-evidencia, causa/falla/impacto, proveedor, OC, orden de servicio, costo, indisponibilidad y retorno al servicio.
+- Realtime Firebase y auditoría de cada planificación/reprogramación.
+
+## V1.1.96 — Programa de Calibración Individual IA
+
+- Nuevo Programa de Calibración individual derivado del Inventario y los módulos de calibración ya existentes.
+- Replica y mejora la estructura del Programa de Calibración 2026: código, equipo, puntos/métodos, modalidad, frecuencia, última/próxima fecha, días, estado y avance.
+- Tiempo real vía Firebase, intervalos IA aprobados, calendario anual, prioridad inteligente y trazabilidad de reprogramaciones/evidencias.
+- Todas las calibraciones internas por método y externas multipunto configuradas aparecen automáticamente, sin doble digitación.
+
+## V1.1.95 — Curva pH · Ishikawa + EURACHEM + Welch + Deriva IA
+
+- Presupuesto completo por nivel pH 4/7/10: u_rep, u_buf, u_res, u_T, u_der y u_T_campo.
+- u_der se obtiene automáticamente del historial comparable; si no existe, se muestra N/A y no se inventa.
+- u_T_campo es configurable y por defecto NO APLICA.
+- Welch–Satterthwaite para grados de libertad efectivos y k95 dinámico (t-Student cuando νeff < 30).
+- Contribución porcentual por fuente y diagnóstico IA de la fuente dominante.
+- Regla de decisión conservadora |Error| + U ≤ EMP y motor de intervalo separado.
+- PDF ampliado con presupuesto metrológico completo.
+
+## V1.1.93 — Curva pH · Calibración Interna IA
+
+Base: V1.1.92.
+
+### Implementado
+- Nuevo perfil `PH_CURVE` en Calibración Interna.
+- Detección automática de pHmetro / pH-metro / EI-188.
+- Formato basado en `Informe 1 de calibracion EI-188 Abril 2026.xlsx`: trazabilidad de buffers pH 4/7/10, 10 lecturas por nivel, condiciones ambientales y efecto opcional de temperatura.
+- Cálculo automático: promedio, s, u repetibilidad, u buffer, u resolución, u temperatura, uc, U(k), error y regla conservadora `|Error| + U ≤ EMP`.
+- EMP editable (0.10 pH por defecto según el formato aportado).
+- Intervalo IA por histórico de calibraciones del mismo método: compara error por nivel, deriva/mes, consumo del EMP, margen preventivo al 80% y meses seguros; propone 3/6/12 meses cuando existe histórico, y conserva el intervalo vigente como provisional cuando aún no hay histórico.
+- Decisión final del laboratorio, justificación cuando difiere de IA, actualización de próxima fecha y frecuencia del método.
+- PDF de calibración, preliminar Firebase, firma P12/PFX y bloqueo tras firma.
+
+La IA no inventa valores de buffers, certificados ni lecturas.
+
+## V1.1.98 — Centro de Alertas Inteligente IA
+- Activa el Centro de Alertas en tiempo real.
+- Prioriza vencimientos, no conformidades, equipos fuera de servicio, correctivos abiertos, firmas pendientes y decisiones de intervalo sin justificar.
+- Las alertas se derivan de las fuentes originales y desaparecen al resolver la causa; no crea una base paralela.
+- Acciones directas llevan a Programa, Mantenimiento, Calibración, Verificación o Expediente.
+- Semáforo CRÍTICA / ALTA / MEDIA con resumen IA trazable.
+
+## V1.1.101 — Asistente IA Metrológico
+- Asistente IA habilitado como copiloto trazable sobre datos existentes del ERP.
+- Consultas por lenguaje natural y código de equipo.
+- Acciones rápidas: resumen de hoy, próximos 30 días, riesgos, auditoría, intervalos, mantenimientos y firmas.
+- Respuestas basadas en Inventario, Expediente, Programa Metrológico, Programa de Calibración, Programa de Mantenimiento, Centro de Alertas e Historial.
+- Fuentes navegables desde cada respuesta; el asistente no modifica registros directamente.
+- Análisis específico por equipo: estado, alertas, próximas obligaciones, últimas evidencias e intervalos/deriva archivados.
+
+
+## V1.1.101 · PWA actualización segura
+- Service Worker network-first para navegación.
+- `updateViaCache: none`, comprobación al abrir, volver a foco y cada 30 minutos.
+- Activación inmediata de nueva versión y recarga única al tomar control.
+- Limpieza automática de cachés ERP anteriores.
+- Cabeceras Netlify no-cache para `sw.js`, `index.html` y manifiesto.
