@@ -60,3 +60,12 @@ La IA no inventa valores de buffers, certificados ni lecturas.
 - Activación inmediata de nueva versión y recarga única al tomar control.
 - Limpieza automática de cachés ERP anteriores.
 - Cabeceras Netlify no-cache para `sw.js`, `index.html` y manifiesto.
+
+
+## V1.1.102 · GitHub / Netlify Production Safe
+- Firebase Web config moved from source code to `VITE_FIREBASE_*` environment variables.
+- `.env.example` documents the required variables without values.
+- `.gitignore` excludes `.env`, `node_modules`, `dist`, `.netlify` and macOS metadata.
+- Netlify secret scanning is configured to allow the intentionally public Firebase Web config keys in the browser bundle.
+- Removed temporary development extracts (`phblock.txt`, `calib_excerpt.txt`).
+- Keeps V1.1.101 30-minute idle session, initial Firebase synchronization and multi-PC realtime behavior.
