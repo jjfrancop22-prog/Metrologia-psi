@@ -102,3 +102,40 @@
 
 /* V1.1.99 · Asistente IA Metrológico */
 .assistant-page .kpis{grid-template-columns:repeat(4,minmax(140px,1fr))}.assistant-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;margin-top:16px}.assistant-side{border:1px solid #d8e4ef;border-radius:16px;background:#f8fbfe;padding:14px;display:flex;flex-direction:column;gap:8px;height:max-content}.assistant-side>b{color:#0c568b;margin-bottom:4px}.assistant-side button{border:1px solid #d4e3ef;background:#fff;border-radius:10px;padding:10px 12px;text-align:left;color:#24445f;font-weight:800;cursor:pointer}.assistant-side button:hover{background:#edf7ff;border-color:#9fc8e4}.assistant-side small{color:#64748b;line-height:1.45;margin-top:8px}.assistant-main{border:1px solid #d8e4ef;border-radius:16px;background:#fff;overflow:hidden}.assistant-chat{height:min(62vh,650px);min-height:430px;overflow:auto;padding:18px;background:linear-gradient(180deg,#f8fbfe,#fff)}.assistant-msg{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;margin-bottom:14px}.assistant-msg.user{grid-template-columns:minmax(0,1fr) 36px}.assistant-msg.user .assistant-avatar{grid-column:2}.assistant-msg.user .assistant-bubble{grid-row:1;grid-column:1;justify-self:end;background:#e9f5ff;border-color:#b8d9f0;max-width:80%}.assistant-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#eaf3fb;border:1px solid #cfe1ef}.assistant-bubble{border:1px solid #d8e4ef;background:#fff;border-radius:14px;padding:12px 14px;line-height:1.5;color:#314b62}.assistant-bubble p{margin:5px 0 9px}.assistant-facts{display:grid;gap:5px;margin:9px 0;padding:10px 12px;background:#f7fafc;border-radius:10px;border:1px solid #e2e8f0}.assistant-facts>div{font-size:12px}.assistant-sources{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px dashed #cfdbe6}.assistant-sources>b{font-size:11px;color:#64748b}.assistant-sources button{border:1px solid #bfd7ea;background:#edf7ff;color:#0d5e99;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:800;cursor:pointer}.assistant-compose{display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px;border-top:1px solid #d8e4ef;background:#fff}.assistant-compose textarea{resize:vertical;min-height:54px}.assistant-compose .btn{align-self:stretch;min-width:100px}@media(max-width:900px){.assistant-layout{grid-template-columns:1fr}.assistant-side{display:grid;grid-template-columns:1fr 1fr}.assistant-side>b,.assistant-side small{grid-column:1/-1}.assistant-chat{min-height:360px}.assistant-page .kpis{grid-template-columns:1fr 1fr}}@media(max-width:600px){.assistant-side{grid-template-columns:1fr}.assistant-compose{grid-template-columns:1fr}.assistant-msg.user .assistant-bubble{max-width:95%}}
+
+
+/* V1.1.103 · Sidebar responsive y preparado para crecimiento de módulos */
+@media (min-width:1001px){
+  .sidebar{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+    padding-bottom:14px;
+  }
+  .sidebar .brand{flex:0 0 auto;}
+  .sidebar .nav{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding-right:5px;
+    padding-bottom:10px;
+    scrollbar-width:thin;
+    scrollbar-color:#ffffff45 transparent;
+  }
+  .sidebar .nav::-webkit-scrollbar{width:6px;}
+  .sidebar .nav::-webkit-scrollbar-thumb{background:#ffffff45;border-radius:999px;}
+  .sidebar .nav::-webkit-scrollbar-track{background:transparent;}
+  .sidebar .side-foot{
+    position:static;
+    flex:0 0 auto;
+    margin-top:8px;
+    padding-top:12px;
+    background:linear-gradient(180deg,rgba(9,26,44,0),#091a2c 22%);
+  }
+}
+@media (max-width:1000px){
+  .sidebar{overflow:visible;}
+  .sidebar .nav{overflow:visible;max-height:none;}
+}

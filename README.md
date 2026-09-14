@@ -69,3 +69,11 @@ La IA no inventa valores de buffers, certificados ni lecturas.
 - Netlify secret scanning is configured to allow the intentionally public Firebase Web config keys in the browser bundle.
 - Removed temporary development extracts (`phblock.txt`, `calib_excerpt.txt`).
 - Keeps V1.1.101 30-minute idle session, initial Firebase synchronization and multi-PC realtime behavior.
+
+
+## V1.1.103 · Sidebar Responsive / Crecimiento Seguro
+- Corrige la superposición del pie ISO/IEC 17025 y el botón Asistente IA en pantallas de escritorio.
+- Sidebar convertido a layout flex vertical: marca fija arriba, navegación central desplazable y pie documental fijo dentro del flujo.
+- La navegación dispone de scroll independiente y queda preparada para agregar nuevos módulos sin montar elementos.
+- No modifica Firebase, autenticación, Firestore, trazabilidad, PWA ni lógica metrológica.
+- Sirve además como prueba de actualización automática PWA desde V1.1.102 a V1.1.103.
