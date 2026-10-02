@@ -1,4 +1,4 @@
-# V1.1.141 — Corrección de arranque Firebase
+# V1.1.142 — Corrección de arranque Firebase
 
 - Elimina el bloqueo global por `Promise.all` y el falso timeout de sincronización.
 - El ERP normal abre al confirmar Inventario; Expediente, Programa, Plantillas, Historial, Auditoría, Catálogos y Control de Campo continúan en tiempo real en segundo plano.

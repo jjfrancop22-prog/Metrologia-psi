@@ -29,6 +29,7 @@ export async function addManualOperation(data,user){
     notes:data.notes||'',
     source:'MANUAL_HISTORY',
     requiresFollowUp:data.requiresFollowUp===true,
+    release644:data.release644||null,
     createdAt:serverTimestamp(),
     createdBy:user.uid,
     createdByEmail:user.email||''
@@ -44,7 +45,7 @@ export async function updateManualOperation(eventId,data,user,previous={},correc
   const after={
     equipmentId:data.equipmentId, equipmentCode:data.equipmentCode||'', equipmentName:data.equipmentName||'',
     date:data.date, type:data.type, title:data.title||'', responsible:data.responsible||'', result:data.result||'', notes:data.notes||'',
-    source:'MANUAL_HISTORY', requiresFollowUp:data.requiresFollowUp===true, updatedAt:serverTimestamp(), updatedBy:user.uid, updatedByEmail:user.email||'',
+    source:'MANUAL_HISTORY', requiresFollowUp:data.requiresFollowUp===true, release644:data.release644||null, updatedAt:serverTimestamp(), updatedBy:user.uid, updatedByEmail:user.email||'',
     correctionReason:String(correctionReason||'Corrección de registro manual').trim(),
     lastCorrection:{previousDate:previous?.date||'',previousType:previous?.type||'',previousTitle:previous?.title||'',correctedBy:user.email||user.uid,correctedAtIso:new Date().toISOString()}
   };
