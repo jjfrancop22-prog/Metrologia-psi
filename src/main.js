@@ -4622,7 +4622,7 @@ function renderFieldMobile(){
 
 function renderApp(){if(FIELD_MOBILE_MODE)return renderFieldMobile();currentPage==='core'?renderCore():currentPage==='dossier'?renderDossier():currentPage==='program'?renderMetrologyProgram():currentPage==='calibrationProgram'?renderCalibrationProgram():currentPage==='maintenanceProgram'?renderMaintenanceProgram():currentPage==='external'?renderExternalControls():currentPage==='verificationInternal'?renderVerificationInternal():currentPage==='calibrationInternal'?renderCalibrationInternal():currentPage==='maintenanceInternal'?renderMaintenanceInternal():currentPage==='fieldControl'?renderFieldControl():currentPage==='history'?renderOperationsHistory():currentPage==='alerts'?renderAlertCenter():currentPage==='assistant'?renderAssistant():renderInventory()}
 function renderStartupSync(message='Sincronizando información metrológica…',detail='Conectando con Firebase y validando la información vigente antes de abrir el ERP.'){
- appRoot.innerHTML=`<section class="login"><div class="login-card"><h1>Sincronización inicial</h1><p>${APP_VERSION} · Modo red / tiempo real</p><div class="derived-box"><b>⏳ ${esc(message)}</b><p>${esc(detail)}</p></div><div class="note">El sistema abrirá únicamente cuando Inventario, Expediente, Programas, Plantillas, Historial, Auditoría y Catálogos hayan respondido desde Firebase.</div></div></section>`;
+ appRoot.innerHTML=`<section class="login ${FIELD_MOBILE_MODE?'field-mobile-login':''}"><div class="login-card"><h1>${FIELD_MOBILE_MODE?'Control de Campo':'Sincronización inicial'}</h1><p>${APP_VERSION} · Modo red / tiempo real</p><div class="derived-box"><b>⏳ ${esc(message)}</b><p>${esc(detail)}</p></div><div class="note">El sistema abrirá únicamente cuando Inventario, Expediente, Programas, Plantillas, Historial, Auditoría y Catálogos hayan respondido desde Firebase.</div></div></section>`;
 }
 function stopRealtime(){unsubEq();unsubStatus();unsubCatalogs();unsubDossier();unsubProgram();unsubMaintenanceTemplates();unsubOperationsHistory();unsubAuditHistory();unsubFieldMovements();unsubFieldConfigs();unsubEq=unsubStatus=unsubCatalogs=unsubDossier=unsubProgram=unsubMaintenanceTemplates=unsubOperationsHistory=unsubAuditHistory=unsubFieldMovements=unsubFieldConfigs=()=>{};}
 function armSessionTimeout(){
@@ -4637,11 +4637,30 @@ function armSessionTimeout(){
 }
 async function startRealtimeSession(user){
  stopRealtime();
- if(!navigator.onLine){startupSyncing=false;renderLogin('No se puede abrir el ERP sin conexión. Conéctese a Internet y vuelva a iniciar sesión.');return;}
- startupSyncing=true;startupSyncError='';renderStartupSync();
+ if(!navigator.onLine){startupSyncing=false;renderLogin('No se puede abrir el sistema sin conexión. Conéctese a Internet y vuelva a intentar.');return;}
+ startupSyncing=true;startupSyncError='';
  const waits=[];
- const first=(register,assign,label)=>new Promise((resolve,reject)=>{let done=false;const ok=data=>{assign(data);if(!done){done=true;resolve(label);return;}/* V1.1.123: cada snapshot posterior debe reflejarse sin salir y volver a entrar. */ realtimeRender();};const bad=err=>{console.error(label,err);if(!done){done=true;reject(new Error(`${label}: ${err?.message||err}`))}};register(ok,bad)});
+ const first=(register,assign,label)=>new Promise((resolve,reject)=>{let done=false;const ok=data=>{assign(data);if(!done){done=true;resolve(label);return;}realtimeRender();};const bad=err=>{console.error(label,err);if(!done){done=true;reject(new Error(`${label}: ${err?.message||err}`))}};register(ok,bad)});
  try{
+  if(FIELD_MOBILE_MODE){
+   // V1.1.140: /campo tiene arranque ligero. Solo espera las fuentes necesarias
+   // para disponibilidad, estado metrológico, dotaciones y movimientos.
+   renderStartupSync('Conectando Control de Campo…','Cargando únicamente equipos, controles vigentes y movimientos necesarios para la salida/retorno.');
+   waits.push(first((cb,err)=>{unsubEq=observeEquipment(cb,err)},d=>equipment=d,'Equipos'));
+   waits.push(first((cb,err)=>{unsubFieldMovements=observeFieldMovements(cb,err)},d=>fieldMovements=d,'Movimientos de campo'));
+   waits.push(first((cb,err)=>{unsubFieldConfigs=observeFieldConfigs(cb,err)},d=>fieldConfigs=d,'Dotaciones de campo'));
+   await Promise.race([Promise.all(waits),new Promise((_,rej)=>setTimeout(()=>rej(new Error('No fue posible cargar Control de Campo. Verifique Internet e intente nuevamente.')),12000))]);
+   if(!navigator.onLine)throw new Error('La conexión se perdió durante la carga de Control de Campo.');
+   startupSyncing=false;touchSession();armSessionTimeout();
+   renderFieldMobile();
+   // El programa y expediente complementan la validación en segundo plano, sin bloquear el acceso móvil.
+   unsubProgram=observeMetrologyProgram(d=>{programPlans=d;realtimeRender()},err=>console.warn('Programa metrológico no disponible en segundo plano:',err));
+   unsubDossier=observeDossier(d=>{dossier=d;realtimeRender()},err=>console.warn('Expediente no disponible en segundo plano:',err));
+   heartbeat(user.uid).catch(console.warn);
+   return;
+  }
+
+  renderStartupSync();
   waits.push(first((cb,err)=>{unsubCatalogs=observeCatalogs(cb,err)},d=>catalogs=d,'Catálogos'));
   waits.push(first((cb,err)=>{unsubEq=observeEquipment(cb,err)},d=>equipment=d,'Inventario'));
   waits.push(first((cb,err)=>{unsubDossier=observeDossier(cb,err)},d=>dossier=d,'Expediente'));
@@ -4653,7 +4672,6 @@ async function startRealtimeSession(user){
   await Promise.race([Promise.all(waits),new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tiempo de espera agotado al sincronizar Firebase. Revise Internet y vuelva a intentar.')),20000))]);
   if(!navigator.onLine)throw new Error('La conexión se perdió durante la sincronización inicial.');
   startupSyncing=false;touchSession();armSessionTimeout();
-  // V1.1.138: el nuevo módulo no bloquea el arranque si las reglas Firebase aún no fueron desplegadas.
   unsubFieldMovements=observeFieldMovements(d=>{fieldMovements=d;realtimeRender()},err=>console.warn('Control de campo pendiente de reglas Firebase:',err));
   unsubFieldConfigs=observeFieldConfigs(d=>{fieldConfigs=d;realtimeRender()},err=>console.warn('Dotaciones de campo pendientes de reglas Firebase:',err));
   await heartbeat(user.uid).catch(console.warn);
@@ -4663,7 +4681,7 @@ async function startRealtimeSession(user){
   migrateLegacySignatureBaselines().catch(console.warn);
  }catch(err){
   startupSyncing=false;startupSyncError=err?.message||String(err);stopRealtime();
-  renderLogin(`Sincronización incompleta: ${startupSyncError}`);
+  renderLogin(FIELD_MOBILE_MODE?startupSyncError:`Sincronización incompleta: ${startupSyncError}`);
  }
 }
 try{observeAuth(async user=>{
