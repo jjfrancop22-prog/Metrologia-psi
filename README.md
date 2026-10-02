@@ -1,3 +1,27 @@
+## V1.1.118 · TERMOHIGRÓMETRO EMP SIMPLE
+- Temperatura: conformidad por `|Error| ≤ 1 °C`.
+- Humedad relativa: conformidad por `|Error| ≤ 5 %HR`.
+- Para esta familia no se usa error residual, corrección ni U como criterio de aceptación.
+- U puede leerse del PDF como dato del certificado, pero no condiciona la decisión simple solicitada.
+- Deriva: diferencia del error entre certificado actual y anterior, separada por magnitud.
+- Service Worker y paquete actualizados a 1.1.118 para forzar renovación de caché/PWA.
+
+## V1.1.115 · Evaluación universal de certificados con corrección
+
+- Estados trazables: CONFORME, REQUIERE CORRECCIÓN, CONFORME CON CORRECCIÓN OBLIGATORIA, NO CONFORME y NO EVALUABLE.
+- Guarda error, U, EMP, corrección, confirmación, error residual, índices antes/después y decisión por punto.
+- La corrección no reduce ni sustituye la incertidumbre del certificado.
+
+## V1.1.112 · Termohigrómetro universal · ficha mínima inteligente
+
+- Nueva familia universal `TERMOHIGROMETRO`, válida para cualquier marca, modelo o código interno.
+- Reconocimiento automático de termohigrómetro, termo-higrómetro, higrómetro digital, higrotermómetro y nombres equivalentes en inglés.
+- Ficha técnica mínima: sensor, indicación, funciones, memoria/registro, instalación representativa y uso previsto.
+- Metrología separada por magnitud: Temperatura (°C) y Humedad relativa (%HR).
+- Rango, resolución, exactitud, EMP e incertidumbre permanecen vacíos hasta disponer de ficha técnica, certificado o criterio interno controlado.
+- Regla de aceptación sugerida para ambas magnitudes: `|Error| + U ≤ EMP`.
+- No contiene valores particulares de AcuRite, EI-194 ni de ningún equipo específico.
+
 ## V1.1.97 — Programa de Mantenimiento Inteligente IA
 
 - Nuevo Programa de Mantenimiento separado en Interno preventivo y Externo/Correctivo.
@@ -77,3 +101,37 @@ La IA no inventa valores de buffers, certificados ni lecturas.
 - La navegación dispone de scroll independiente y queda preparada para agregar nuevos módulos sin montar elementos.
 - No modifica Firebase, autenticación, Firestore, trazabilidad, PWA ni lógica metrológica.
 - Sirve además como prueba de actualización automática PWA desde V1.1.102 a V1.1.103.
+
+
+## V1.1.104 · Balanza IA / Mantenimiento PG0416
+- Ficha técnica IA ampliada para BALANZA y perfil específico EI-189 KERN ABT 220-5DM.
+- Nuevo formato inteligente de mantenimiento interno para balanzas, basado en PSI-PG0416 y datos esenciales de EI-189 / EI-196.
+- IA mantiene decisión post-mantenimiento e intervalo dinámico; el control con pesa patrón no sustituye calibración/verificación formal.
+
+
+## V1.1.111 · Balanza · Control Externo IA de intervalo
+- Controles Externos detecta automáticamente la familia BALANZA.
+- Lector PDF especializado para certificados ELICROM: identificación, fecha/certificado, d/e/capacidad, cargas, indicación, error, U, EMP y cumplimiento.
+- Verifica trazabilidad esencial de masas patrón: identificación, clase, certificado/vigencia, laboratorio acreditado y declaración de cadena al SI.
+- Aplica regla conservadora |e| + U <= EMP por carga.
+- Certificado anterior solo se acepta como histórico si corresponde al mismo equipo; evita usar otra balanza para calcular deriva.
+- Compara cargas equivalentes, calcula delta de error, deriva/mes, uso del EMP, margen y meses seguros.
+- Un único certificado queda como LINEA BASE y no habilita ampliación automática.
+- Conserva excentricidad/repetibilidad como evidencia resumida y el PDF completo en Expediente.
+- Guarda trazabilidad de la decisión IA y la decisión final del laboratorio.
+
+
+## V1.1.111 · Balanza · lector especializado por niveles
+- El lector de certificados de balanza reconstruye directamente la tabla **Ensayo de Errores de Indicación** usando coordenadas PDF y fallback por líneas.
+- Extrae por nivel: Valor patrón, Indicación, Error, U, k, EMP y Cumplimiento.
+- Compara certificado anterior y actual solo para el mismo equipo y la misma carga; calcula deriva/mes, consumo del EMP, margen y recomendación de intervalo.
+- El cero se conserva como evidencia del certificado pero no se usa como punto limitante de deriva.
+- Motor de lectura: `BALANCE_INDICATION_TABLE_XY_V2`.
+
+
+## V1.1.111 · Criterio metrológico base universal
+- Deriva calculada únicamente con cambio de error y tiempo entre ciclos.
+- U expandida separada de la deriva y usada con EMP para consumo y margen cuando aplica.
+- Tabla auditable: Error previo/actual, delta, meses, deriva/mes, U, EMP, consumo, margen, meses seguros y estado.
+- No se inventa U/EMP para familias sin magnitudes comparables; se conserva el criterio técnico específico.
+- Factor conservador 0,80 identificado explícitamente como política interna.

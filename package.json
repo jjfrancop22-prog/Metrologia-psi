@@ -1,6 +1,6 @@
 {
   "name": "erp-metrologico-nextgen",
-  "version": "1.1.103",
+  "version": "1.1.139",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "dev:web": "vite --host 0.0.0.0",
-    "dev:sign": "node server/sign-server.mjs"
+    "dev:sign": "node server/sign-server.mjs",
+    "test:thermohygrometer": "node tests/thermohygrometer.test.mjs"
   },
   "dependencies": {
     "firebase": "^12.2.1",

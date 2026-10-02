@@ -93,6 +93,16 @@ service cloud.firestore {
       allow read, create, update, delete: if signedIn();
     }
 
+
+    match /fieldMovements/{movementId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+    match /fieldEquipmentConfigs/{equipmentId} {
+      allow read, create, update: if signedIn();
+      allow delete: if false;
+    }
+
     match /operationsHistory/{eventId} {
       allow read, create: if signedIn();
       // Solo eventos manuales pueden corregirse; la evidencia automática se corrige en su módulo de origen.
