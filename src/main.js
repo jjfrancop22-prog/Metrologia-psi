@@ -716,13 +716,12 @@ const toggle=()=>{togglePlan('cRequired','cMod','cInternal','cExternal','INTERNA
    if(current.qrUrl&&prompt('El equipo ya tiene QR. Escriba CALIDAD para regenerarlo:')!=='CALIDAD')return;
    const btn=document.querySelector('#generateSmartQr');btn.disabled=true;btn.textContent='Generando…';
    try{
-     const target=smartEquipmentQrTarget(current),url=await smartQrDataUrl(target),file=await dataUrlFile(url,`${current.code||'equipo'}-QR.png`);
-     const qrUrl=await uploadEquipmentQr(editingId,file);
+     const target=smartEquipmentQrTarget(current),qrUrl=await smartQrDataUrl(target);
      const meta={...(current.identificationLabel||{}),qrGenerated:true,qrTarget:target,generatedAt:new Date().toISOString(),generatedBy:currentUser?.email||'',installed:false,installedAt:null,installedBy:'',revision:Number(current.identificationLabel?.revision||0)+1};
      const saved=await updateEquipment(editingId,{...current,qrUrl,identificationLabel:meta},currentUser);
      if(saved?.savedRecord)equipment=equipment.map(x=>x.id===editingId?saved.savedRecord:x);
      alert('QR inteligente generado. La instalación física queda POR VERIFICAR hasta confirmarla.');document.querySelector('#eqModal')?.remove();openEquipmentModal(saved?.savedRecord||{...current,qrUrl,identificationLabel:meta},'state')
-   }catch(err){alert('No se pudo generar el QR: '+(err?.message||err));btn.disabled=false;btn.textContent='⚡ Generar QR inteligente'}
+   }catch(err){alert('No se pudo guardar el QR inteligente: '+(err?.message||err));btn.disabled=false;btn.textContent='⚡ Generar QR inteligente'}
  };
  if(document.querySelector('#printSmartLabel'))document.querySelector('#printSmartLabel').onclick=()=>{const current=equipment.find(x=>x.id===editingId)||e;printEquipmentSmartLabel(current)};
  if(document.querySelector('#confirmLabelInstalled'))document.querySelector('#confirmLabelInstalled').onclick=async()=>{
@@ -4691,7 +4690,7 @@ async function startRealtimeSession(user){
  const bg=(register,assign,label)=>{try{return register(data=>{assign(data);realtimeRender()},err=>console.warn(`${label} no disponible temporalmente:`,err))}catch(err){console.warn(`${label} no pudo iniciar:`,err);return ()=>{}}};
  try{
   if(FIELD_MOBILE_MODE){
-   // V1.1.146: el portal QR no depende del bootstrap completo del ERP.
+   // V1.1.147: el portal QR no depende del bootstrap completo del ERP.
    // Inventario confirma la conexión; dotaciones y movimientos cargan en paralelo y
    // actualizan la pantalla apenas responden. Así una colección lenta no bloquea el acceso.
    renderStartupSync('Conectando Control de Campo…','Validando sesión y disponibilidad de equipos.');
@@ -4707,7 +4706,7 @@ async function startRealtimeSession(user){
    return;
   }
 
-  // V1.1.146: se restaura el arranque estable/progresivo. El ERP abre cuando
+  // V1.1.147: se restaura el arranque estable/progresivo. El ERP abre cuando
   // Inventario responde; el resto de fuentes se sincroniza en segundo plano.
   // Ninguna colección auxiliar puede provocar un falso "timeout" global.
   renderStartupSync('Conectando con Firebase…','Validando inventario. Los demás módulos se sincronizarán en segundo plano.');
