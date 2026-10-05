@@ -15,7 +15,6 @@ import { uploadEquipmentQr } from './services/files.js';
 import { observeDossier, addDossierDocument, addDossierLink, updateDossierDocument, addGeneratedDossierDocument, replaceGeneratedDossierDocument, supersedeDocument, archiveCategoryRevisions, repairDossierConsistency, getDossierBlob, evidenceFilePolicy } from './services/dossier.js';
 import { observeMetrologyProgram, saveProgramPlan } from './services/metrologyProgram.js';
 import { observeMaintenanceTemplates, createMaintenanceTemplate, updateMaintenanceTemplate } from './services/maintenanceTemplates.js';
-import { publishIso647CalibrationSnapshot } from './services/iso647Snapshot.js';
 import { observeOperationsHistory, observeAuditHistory, addManualOperation, updateManualOperation } from './services/history.js';
 import { evaluateUvCalibration, volumetricUncertainty, volumetricUncertaintyDetails, uncertaintyByLevel, functionResponseUncertainty, functionResponseUncertaintyDetails } from './services/uvCalibration.js';
 import { saveCalibrationDraft, getCalibrationDraft, deleteCalibrationDraft } from './services/calibrationDrafts.js';
@@ -1071,25 +1070,6 @@ function buildProgramItems(){
  }
  return out;
 }
-let iso647SnapshotLastSignature='';
-let iso647SnapshotPublishing=false;
-async function publishIso647SnapshotIfChanged(){
- if(!currentUser||iso647SnapshotPublishing)return;
- const rows=buildProgramItems().filter(x=>x.type==='CALIBRATION').map(x=>({
-   id:x.id,equipmentId:x.equipment?.id||'',equipmentCode:x.equipment?.code||'',equipmentName:x.equipment?.name||'',
-   modality:x.modality||'',scopeKey:x.scopeKey||'',methodName:x.methodName||'',frequency:Number(x.frequency)||0,
-   lastDate:x.lastDate||'',dueDate:x.dueDate||'',suggestedDate:x.suggestedDate||'',status:x.status||'',
-   priority:x.priority||'',days:x.days??null,provider:x.provider||'',who:x.who||'',
-   intervalRationale:x.intervalAi?.reason||x.intervalAi?.rationale||''
- }));
- const signature=JSON.stringify(rows.map(r=>[r.id,r.frequency,r.lastDate,r.dueDate,r.status,r.methodName]));
- if(signature===iso647SnapshotLastSignature)return;
- iso647SnapshotPublishing=true;
- try{await publishIso647CalibrationSnapshot(rows,currentUser);iso647SnapshotLastSignature=signature}
- catch(err){console.warn('Snapshot ISO 6.4.7:',err)}
- finally{iso647SnapshotPublishing=false}
-}
-
 function programStatusBadge(s){const cls={VENCIDA:'program-bad',HOY:'program-bad',PROXIMA:'program-warn',SIN_FECHA:'program-muted',PROGRAMADA:'program-info',VIGENTE:'program-ok',POR_CONDICION:'program-info'}[s]||'program-muted';return `<span class="program-state ${cls}">${esc(s.replace('_',' '))}</span>`}
 function priorityBadge(p){return `<span class="priority priority-${p.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}">${esc(p)}</span>`}
 function programActionLabel(i){if(i.modality==='EXTERNAL')return i.evidence?'Actualizar evidencia':'Subir evidencia';return 'Ruta de ejecución'}
@@ -1118,7 +1098,6 @@ function programAiLabel(i){
 }
 function renderMetrologyProgram(){
  const all=buildProgramItems(),rows=filteredProgramItems();
- publishIso647SnapshotIfChanged();
  const overdue=all.filter(x=>x.status==='VENCIDA'||x.status==='HOY').length,soon=all.filter(x=>x.status==='PROXIMA').length,unscheduled=all.filter(x=>x.status==='SIN_FECHA').length,covered=all.filter(x=>x.evidence).length;
  const health=all.length?Math.round(all.reduce((n,i)=>n+programPlanningScore(i),0)/all.length):100;
  const bucketCounts={ATTENTION:0,SOON:0,PLANNED:0,CONDITION:0}; all.forEach(i=>bucketCounts[programAiBucket(i)]++);
@@ -4664,7 +4643,7 @@ async function startRealtimeSession(user){
  const bg=(register,assign,label)=>{try{return register(data=>{assign(data);realtimeRender()},err=>console.warn(`${label} no disponible temporalmente:`,err))}catch(err){console.warn(`${label} no pudo iniciar:`,err);return ()=>{}}};
  try{
   if(FIELD_MOBILE_MODE){
-   // V1.1.146: el portal QR no depende del bootstrap completo del ERP.
+   // V1.1.145: el portal QR no depende del bootstrap completo del ERP.
    // Inventario confirma la conexión; dotaciones y movimientos cargan en paralelo y
    // actualizan la pantalla apenas responden. Así una colección lenta no bloquea el acceso.
    renderStartupSync('Conectando Control de Campo…','Validando sesión y disponibilidad de equipos.');
@@ -4680,7 +4659,7 @@ async function startRealtimeSession(user){
    return;
   }
 
-  // V1.1.146: se restaura el arranque estable/progresivo. El ERP abre cuando
+  // V1.1.145: se restaura el arranque estable/progresivo. El ERP abre cuando
   // Inventario responde; el resto de fuentes se sincroniza en segundo plano.
   // Ninguna colección auxiliar puede provocar un falso "timeout" global.
   renderStartupSync('Conectando con Firebase…','Validando inventario. Los demás módulos se sincronizarán en segundo plano.');
