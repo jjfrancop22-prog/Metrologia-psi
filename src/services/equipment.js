@@ -136,6 +136,24 @@ export function normalizeEquipment(payload){
       }
     },
 
+    // ISO/IEC 17025 6.4.11 · fuente maestra de correcciones / valores de referencia.
+    // Se conserva en la ficha del equipo y forma parte de la huella documental.
+    correctionControl: {
+      applicability: ['APLICA','NO_APLICA','POR_EVALUAR'].includes(String(payload.correctionControl?.applicability||'')) ? String(payload.correctionControl.applicability) : 'POR_EVALUAR',
+      type: clean(payload.correctionControl?.type) || 'CORRECCION_ADITIVA',
+      applicationMethod: clean(payload.correctionControl?.applicationMethod) || 'MANUAL',
+      source: clean(payload.correctionControl?.source),
+      sourceDate: payload.correctionControl?.sourceDate || null,
+      notes: clean(payload.correctionControl?.notes),
+      reviewedAt: payload.correctionControl?.reviewedAt || null,
+      reviewedBy: clean(payload.correctionControl?.reviewedBy),
+      values: (payload.correctionControl?.values || []).map((x,i)=>({
+        id: clean(x.id) || `corr-${i+1}`,
+        point: clean(x.point), indication: clean(x.indication), referenceValue: clean(x.referenceValue),
+        correction: clean(x.correction), unit: clean(x.unit), uncertainty: clean(x.uncertainty)
+      })).filter(x=>x.point||x.indication||x.referenceValue||x.correction)
+    },
+
     // Campos de solo lectura para este módulo. Serán actualizados por los módulos ejecutores.
     currentControl: payload.currentControl || {
       calibration: { lastDate:'', nextDate:'', result:'SIN REGISTRO', sourceRecordId:'' },
@@ -183,6 +201,7 @@ function changedSections(before={}, after={}){
   if(!same({code:a.code,name:a.name,status:a.status,location:a.location,responsible:a.responsible,criticality:a.criticality,impactsResults:a.impactsResults,intendedUse:a.intendedUse,useRestrictions:a.useRestrictions},{code:b.code,name:b.name,status:b.status,location:b.location,responsible:b.responsible,criticality:b.criticality,impactsResults:b.impactsResults,intendedUse:b.intendedUse,useRestrictions:b.useRestrictions})) sections.push('Identificación');
   if(!same(a.technical,b.technical)) sections.push('Técnica');
   if(!same(a.metrologicalCharacteristics,b.metrologicalCharacteristics)||a.metrologicalControlRequired!==b.metrologicalControlRequired) sections.push('Metrología');
+  if(!same(a.correctionControl,b.correctionControl)) sections.push('Correcciones / valores de referencia 6.4.11');
   if(!same(a.plans?.calibration,b.plans?.calibration)) sections.push('Calibración');
   if(!same(a.plans?.verification,b.plans?.verification)) sections.push('Verificación');
   if(!same(a.plans?.maintenance,b.plans?.maintenance)) sections.push('Mantenimiento');
@@ -209,6 +228,8 @@ export async function updateEquipment(id, payload, user){
         maintenance:{...(before?.plans?.maintenance||{}),...(payload.plans?.maintenance||{}),internal:{...(before?.plans?.maintenance?.internal||{}),...(payload.plans?.maintenance?.internal||{})},external:{...(before?.plans?.maintenance?.external||{}),...(payload.plans?.maintenance?.external||{})}}
       },
       approval:{...(before?.approval||{}),...(payload.approval||{})},
+      // 6.4.11: mezcla explícita para que una actualización parcial nunca pierda la decisión técnica.
+      correctionControl:{...(before?.correctionControl||{}),...(payload.correctionControl||{})},
       currentControl: payload.currentControl || before?.currentControl
     });
 
@@ -257,11 +278,24 @@ export async function updateEquipment(id, payload, user){
   const savedSnap = await getDocFromServer(ref);
   if(!savedSnap.exists()) throw new Error('Firebase no confirmó el registro después de guardar.');
   const savedRecord={id,...savedSnap.data()};
-  await publishPublicEquipmentStatus(id,savedRecord);
+  // V1.1.158: confirmación específica 6.4.11. No se informa "guardado" si Firebase
+  // no devolvió exactamente la aplicabilidad seleccionada por el usuario.
+  const requestedCorrection=String(result.data?.correctionControl?.applicability||'POR_EVALUAR');
+  const persistedCorrection=String(savedRecord?.correctionControl?.applicability||'POR_EVALUAR');
+  if(requestedCorrection!==persistedCorrection){
+    throw new Error(`Firebase no confirmó 6.4.11: se solicitó ${requestedCorrection} y el servidor devolvió ${persistedCorrection}.`);
+  }
+  let publicStatusPublished=true;
+  try{
+    await publishPublicEquipmentStatus(id,savedRecord);
+  }catch(err){
+    publicStatusPublished=false;
+    console.warn('Equipo guardado en Inventario; publicación QR pendiente/no autorizada:',err);
+  }
   const confirmedHash=await hashEquipmentSnapshot(savedRecord);
   if(confirmedHash!==result.afterHash) throw new Error('El servidor devolvió datos diferentes a los enviados. Reintente.');
 
-  return {saved:true,contentChanged:result.contentChanged,requiresNewSignature:result.requiresNewSignature,pendingRevision:result.requiresNewSignature?result.nextWorking:'',workingRevision:result.documentStatus.workingRevision,changedSections:result.sections,afterHash:result.afterHash,savedRecord};
+  return {saved:true,publicStatusPublished,contentChanged:result.contentChanged,requiresNewSignature:result.requiresNewSignature,pendingRevision:result.requiresNewSignature?result.nextWorking:'',workingRevision:result.documentStatus.workingRevision,changedSections:result.sections,afterHash:result.afterHash,savedRecord};
 }
 
 export async function changeEquipmentStatus(id, status, reason, user){

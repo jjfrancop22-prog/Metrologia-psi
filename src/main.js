@@ -786,9 +786,10 @@ const toggle=()=>{togglePlan('cRequired','cMod','cInternal','cExternal','INTERNA
    try{await rememberSmartFields()}catch(err){console.warn('Catálogos no bloquearon el guardado:',err)}
    if(preliminary){editorSaving=false;showMsg('✅ Preliminar guardado y confirmado en Firebase.');return}
    const parts=(saveInfo.changedSections||[]).join(', ');
+   const corrSaved=saveInfo.savedRecord?.correctionControl?.applicability||'POR_EVALUAR';
    const serverCriterion=saveInfo.savedRecord?.plans?.verification?.acceptanceCriterion||'';
    const serverRule=saveInfo.savedRecord?.plans?.verification?.selectionCriterion||'';
-   showMsg(`✅ Guardado confirmado en servidor. Criterio aceptación: ${serverCriterion||'—'} · Regla/punto: ${serverRule||'—'}${saveInfo.requiresNewSignature?` · Rev. ${saveInfo.pendingRevision} pendiente de firma`:''}`);
+   showMsg(`✅ Guardado confirmado en servidor. 6.4.11: ${corrSaved.replaceAll('_',' ')} · Criterio aceptación: ${serverCriterion||'—'} · Regla/punto: ${serverRule||'—'}${saveInfo.requiresNewSignature?` · Rev. ${saveInfo.pendingRevision} pendiente de firma`:''}`);
    editorSaving=false; realtimeRenderPending=false;
    setTimeout(()=>{
     modal?.remove(); renderApp();

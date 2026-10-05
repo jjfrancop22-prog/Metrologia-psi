@@ -32,7 +32,7 @@ service cloud.firestore {
         && request.resource.data.code == equipmentCode
         && request.resource.data.keys().hasOnly([
           'equipmentId','code','name','status','brand','model',
-          'calibration','verification','maintenance','labelInstalled',
+          'calibration','verification','maintenance','correction','labelInstalled',
           'publicSchemaVersion','updatedAt'
         ]);
       allow delete: if false;

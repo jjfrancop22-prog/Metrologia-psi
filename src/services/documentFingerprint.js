@@ -16,7 +16,7 @@ function sortObject(value){
 }
 
 export function equipmentDocumentSnapshot(e={}){
-  const t=e.technical||{}, p=e.plans||{}, a=e.approval||{}, cc=e.currentControl||{};
+  const t=e.technical||{}, p=e.plans||{}, a=e.approval||{}, cc=e.currentControl||{}, corr=e.correctionControl||{};
   return sortObject({
     code:clean(e.code), name:clean(e.name), status:clean(e.status), location:clean(e.location),
     responsible:clean(e.responsible), criticality:clean(e.criticality), impactsResults:!!e.impactsResults,
@@ -36,6 +36,11 @@ export function equipmentDocumentSnapshot(e={}){
     })),
     plans:{
       calibration:p.calibration||{},verification:p.verification||{},maintenance:p.maintenance||{}
+    },
+    correctionControl:{
+      applicability:clean(corr.applicability)||'POR_EVALUAR',type:clean(corr.type),applicationMethod:clean(corr.applicationMethod),
+      source:clean(corr.source),sourceDate:clean(corr.sourceDate),notes:clean(corr.notes),reviewedAt:clean(corr.reviewedAt),reviewedBy:clean(corr.reviewedBy),
+      values:(corr.values||[]).map(x=>({point:clean(x.point),indication:clean(x.indication),referenceValue:clean(x.referenceValue),correction:clean(x.correction),unit:clean(x.unit),uncertainty:clean(x.uncertainty)}))
     },
     currentControl:{
       calibration:cc.calibration||{},verification:cc.verification||{},maintenance:cc.maintenance||{}
