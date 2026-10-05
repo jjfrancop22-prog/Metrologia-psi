@@ -8,7 +8,7 @@ const FIELD_MOBILE_MODE = location.pathname.replace(/\/+$/,'')==='/campo' || new
 import { firebaseConfigured, firebaseInitError } from './services/firebase.js';
 import { login, logout, observeAuth, touchSession, sessionIsFresh, SESSION_IDLE_MINUTES } from './services/auth.js';
 import { observeEquipment, observeSystemStatus, heartbeat } from './services/sync.js';
-import { getPublicEquipmentStatus } from './services/publicEquipment.js';
+import { getPublicEquipmentStatus, publishPublicEquipmentStatus } from './services/publicEquipment.js';
 import { observeCatalogs, addCatalogItem } from './services/catalogs.js';
 import { createEquipment, updateEquipment, changeEquipmentStatus, updateEquipmentDocumentStatus, updateEquipmentCurrentControl } from './services/equipment.js';
 import { hashEquipmentSnapshot } from './services/documentFingerprint.js';
@@ -760,6 +760,8 @@ const toggle=()=>{togglePlan('cRequired','cMod','cInternal','cExternal','INTERNA
    }
    const qr=document.querySelector('#qrFile')?.files?.[0];
    if(qr){showMsg('Subiendo QR…');const qrUrl=await uploadEquipmentQr(editingId,qr);const qrSave=await updateEquipment(editingId,{...data,qrUrl},currentUser);if(qrSave?.savedRecord)equipment=equipment.map(x=>x.id===editingId?qrSave.savedRecord:x)}
+   const publicEq=equipment.find(x=>x.id===editingId)||saveInfo.savedRecord;
+   if(publicEq){try{await publishDerivedPublicEquipment(publicEq)}catch(err){console.warn('Estado público QR no pudo actualizarse:',err)}}
    try{await rememberSmartFields()}catch(err){console.warn('Catálogos no bloquearon el guardado:',err)}
    if(preliminary){editorSaving=false;showMsg('✅ Preliminar guardado y confirmado en Firebase.');return}
    const parts=(saveInfo.changedSections||[]).join(', ');
@@ -1121,6 +1123,24 @@ function buildProgramItems(){
 function programStatusBadge(s){const cls={VENCIDA:'program-bad',HOY:'program-bad',PROXIMA:'program-warn',SIN_FECHA:'program-muted',PROGRAMADA:'program-info',VIGENTE:'program-ok',POR_CONDICION:'program-info'}[s]||'program-muted';return `<span class="program-state ${cls}">${esc(s.replace('_',' '))}</span>`}
 function priorityBadge(p){return `<span class="priority priority-${p.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}">${esc(p)}</span>`}
 function programActionLabel(i){if(i.modality==='EXTERNAL')return i.evidence?'Actualizar evidencia':'Subir evidencia';return 'Ruta de ejecución'}
+function publicControlFromProgram(e,type){
+ let items=[];
+ try{items=buildProgramItems().filter(i=>i.equipment?.id===e.id&&i.type===type)}catch(_){items=[]}
+ const rank=i=>{const d=String(i.lastDate||i.evidence?.generatedData?.date||i.evidence?.issueDate||'');return d?Date.parse(d+'T12:00:00')||0:0};
+ const i=[...items].sort((a,b)=>rank(b)-rank(a))[0]||null;
+ const base=type==='CALIBRATION'?'calibration':type==='VERIFICATION'?'verification':'maintenance';
+ const candidates=[e.currentControl?.[base],e.currentControl?.[base+'Internal'],e.currentControl?.[base+'External']].filter(Boolean);
+ const c=candidates.find(x=>x?.lastDate||x?.nextDate||x?.result)||{};
+ const ev=i?.evidence?.generatedData||{};
+ const result=c.result||ev.result||i?.evidence?.notes||((i?.lastDate||i?.evidence)?'REGISTRADO':'SIN REGISTRO');
+ return {result:String(result||'SIN REGISTRO'),lastDate:c.lastDate||i?.lastDate||ev.date||i?.evidence?.issueDate||'',nextDate:c.nextDate||i?.dueDate||ev.nextDate||i?.evidence?.expiryDate||''};
+}
+async function publishDerivedPublicEquipment(e){
+ if(!e?.id||!e?.code)return;
+ const derived={...e,currentControl:{...(e.currentControl||{}),calibration:publicControlFromProgram(e,'CALIBRATION'),verification:publicControlFromProgram(e,'VERIFICATION'),maintenance:publicControlFromProgram(e,'MAINTENANCE')}};
+ await publishPublicEquipmentStatus(e.id,derived);
+}
+
 function filteredProgramItems(){const q=(filters.pq||'').toLowerCase();return buildProgramItems().filter(i=>{
  const hay=[i.equipment.code,i.equipment.name,i.equipment.location,i.who,i.provider,humanType(i.type),humanMod(i.modality),i.methodName||''].join(' ').toLowerCase();
  return (!q||hay.includes(q))&&(!filters.pstatus||i.status===filters.pstatus)&&(!filters.ptype||i.type===filters.ptype)&&(!filters.pmodality||i.modality===filters.pmodality);
