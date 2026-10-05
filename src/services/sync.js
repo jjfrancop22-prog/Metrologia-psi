@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db, firebaseConfigured } from './firebase.js';
 
 export function observeEquipment(cb, onError=console.error){
@@ -6,6 +6,13 @@ export function observeEquipment(cb, onError=console.error){
   const q=query(collection(db,'equipment'),orderBy('code'));
   return onSnapshot(q, snap => cb(snap.docs.map(d=>({id:d.id,...d.data()}))), onError);
 }
+
+export async function getPublicEquipmentById(id){
+  if(!firebaseConfigured || !id) return null;
+  const snap=await getDoc(doc(db,'equipment',String(id)));
+  return snap.exists()?{id:snap.id,...snap.data()}:null;
+}
+
 export function observeSystemStatus(cb){
   if(!firebaseConfigured){ cb({mode:'NO_CONFIGURADO'}); return ()=>{}; }
   return onSnapshot(doc(db,'system','status'), snap => cb(snap.exists()?snap.data():{mode:'CONECTADO'}), ()=>cb({mode:'CONECTADO'}));

@@ -7,7 +7,7 @@ const APP_VERSION = `V${packageInfo.version}`;
 const FIELD_MOBILE_MODE = location.pathname.replace(/\/+$/,'')==='/campo' || new URLSearchParams(location.search).get('campo')==='1';
 import { firebaseConfigured, firebaseInitError } from './services/firebase.js';
 import { login, logout, observeAuth, touchSession, sessionIsFresh, SESSION_IDLE_MINUTES } from './services/auth.js';
-import { observeEquipment, observeSystemStatus, heartbeat } from './services/sync.js';
+import { observeEquipment, observeSystemStatus, heartbeat, getPublicEquipmentById } from './services/sync.js';
 import { observeCatalogs, addCatalogItem } from './services/catalogs.js';
 import { createEquipment, updateEquipment, changeEquipmentStatus, updateEquipmentDocumentStatus, updateEquipmentCurrentControl } from './services/equipment.js';
 import { hashEquipmentSnapshot } from './services/documentFingerprint.js';
@@ -784,7 +784,7 @@ const toggle=()=>{togglePlan('cRequired','cMod','cInternal','cExternal','INTERNA
 function bindRemoveMet(){document.querySelectorAll('.removeMet').forEach(b=>b.onclick=()=>{if(document.querySelectorAll('.met-row').length>1)b.closest('tr').remove();else b.closest('tr').querySelectorAll('input').forEach(i=>i.value='')})}
 function togglePlan(checkId,modId,intId,extId,intV,extV,bothV){const req=document.querySelector('#'+checkId).checked,mod=document.querySelector('#'+modId).value;document.querySelector('#'+modId).disabled=!req;const a=document.querySelector('#'+intId),b=document.querySelector('#'+extId);a.classList.toggle('disabled',!req||![intV,bothV].includes(mod));b.classList.toggle('disabled',!req||![extV,bothV].includes(mod));a.querySelectorAll('input').forEach(x=>x.disabled=!req||![intV,bothV].includes(mod));b.querySelectorAll('input').forEach(x=>x.disabled=!req||![extV,bothV].includes(mod));}
 
-function smartEquipmentQrTarget(e){return `${window.location.origin}/?equipment=${encodeURIComponent(e.code||e.id)}&status=1`}
+function smartEquipmentQrTarget(e){return `${window.location.origin}/?equipment=${encodeURIComponent(e.id||e.code)}&status=1`}
 async function smartQrDataUrl(text){
  const mod=await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm');
  const QR=mod.default||mod;
@@ -4690,7 +4690,7 @@ async function startRealtimeSession(user){
  const bg=(register,assign,label)=>{try{return register(data=>{assign(data);realtimeRender()},err=>console.warn(`${label} no disponible temporalmente:`,err))}catch(err){console.warn(`${label} no pudo iniciar:`,err);return ()=>{}}};
  try{
   if(FIELD_MOBILE_MODE){
-   // V1.1.147: el portal QR no depende del bootstrap completo del ERP.
+   // V1.1.148: el portal QR no depende del bootstrap completo del ERP.
    // Inventario confirma la conexión; dotaciones y movimientos cargan en paralelo y
    // actualizan la pantalla apenas responden. Así una colección lenta no bloquea el acceso.
    renderStartupSync('Conectando Control de Campo…','Validando sesión y disponibilidad de equipos.');
@@ -4706,7 +4706,7 @@ async function startRealtimeSession(user){
    return;
   }
 
-  // V1.1.147: se restaura el arranque estable/progresivo. El ERP abre cuando
+  // V1.1.148: se restaura el arranque estable/progresivo. El ERP abre cuando
   // Inventario responde; el resto de fuentes se sincroniza en segundo plano.
   // Ninguna colección auxiliar puede provocar un falso "timeout" global.
   renderStartupSync('Conectando con Firebase…','Validando inventario. Los demás módulos se sincronizarán en segundo plano.');
@@ -4736,7 +4736,61 @@ async function startRealtimeSession(user){
   renderLogin(startupSyncError);
  }
 }
-try{observeAuth(async user=>{
+
+const PUBLIC_QR_PARAMS=new URLSearchParams(location.search);
+const PUBLIC_QR_MODE=PUBLIC_QR_PARAMS.get('status')==='1' && !!PUBLIC_QR_PARAMS.get('equipment');
+
+function publicControlSnapshot(e){
+ const c=e?.currentControl||{};
+ const cal=c.calibration||c.calibrationInternal||c.calibrationExternal||{};
+ const next=String(cal.nextDate||cal.dueDate||'').slice(0,10);
+ const last=String(cal.lastDate||cal.date||cal.completedAt||'').slice(0,10);
+ const status=String(e?.status||'').toUpperCase();
+ let decision='APTO PARA USO',tone='ok',reason='Estado activo y sin vencimiento detectado.';
+ if(['FUERA DE SERVICIO','RESTRINGIDO','BAJA'].includes(status)){decision='NO USAR';tone='bad';reason=`Estado del equipo: ${status}`;}
+ else if(next){const d=new Date(next+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);if(!Number.isNaN(d.getTime())&&d<t){decision='NO USAR';tone='bad';reason=`Calibración vencida el ${next}`;}}
+ else {decision='ESTADO POR VERIFICAR';tone='warn';reason='No existe una fecha de vigencia suficiente para decidir automáticamente.';}
+ return {cal,last,next,status,decision,tone,reason};
+}
+function renderPublicQrEquipment(e){
+ const app=document.querySelector('#app')||document.body;
+ const s=publicControlSnapshot(e);
+ const calState=String(s.cal?.status||s.cal?.result||'SIN REGISTRO');
+ const ver=e?.currentControl?.verification||{};
+ const maint=e?.currentControl?.maintenance||{};
+ app.innerHTML=`<main style="min-height:100vh;background:#f4f8fc;padding:18px;font-family:Inter,system-ui,-apple-system,sans-serif;color:#1f2c3f">
+ <section style="max-width:620px;margin:0 auto;background:white;border:1px solid #d9e4ef;border-radius:24px;overflow:hidden;box-shadow:0 12px 36px #17324d14">
+  <header style="padding:24px;border-bottom:1px solid #e4ebf2"><small style="font-weight:800;color:#607086">LAB-PSI · CONSULTA METROLÓGICA</small><h1 style="margin:8px 0 4px;font-size:30px">${esc(e.code||'Equipo')} · ${esc(e.name||'')}</h1><div style="color:#66758a">Estado consultado directamente del ERP Metrológico</div></header>
+  <div style="padding:20px">
+   <div style="padding:20px;border-radius:18px;background:${s.tone==='bad'?'#fff0f0':s.tone==='warn'?'#fff8e8':'#edf9f0'};border:1px solid ${s.tone==='bad'?'#efb6b6':s.tone==='warn'?'#ecd392':'#bfe4c8'}"><div style="font-size:12px;font-weight:800;color:#66758a">CONDICIÓN DE USO</div><div style="font-size:28px;font-weight:900;margin-top:5px">${esc(s.decision)}</div><div style="margin-top:6px">${esc(s.reason)}</div></div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+    <div class="publicCard"><b>Estado del equipo</b><span>${esc(s.status||'—')}</span></div>
+    <div class="publicCard"><b>Calibración</b><span>${esc(calState)}</span></div>
+    <div class="publicCard"><b>Última calibración</b><span>${esc(s.last||'—')}</span></div>
+    <div class="publicCard"><b>Vigente hasta</b><span>${esc(s.next||'—')}</span></div>
+    <div class="publicCard"><b>Verificación</b><span>${esc(ver.status||ver.result||'SIN REGISTRO')}</span></div>
+    <div class="publicCard"><b>Mantenimiento</b><span>${esc(maint.status||maint.result||'SIN REGISTRO')}</span></div>
+   </div>
+   <div style="margin-top:14px;padding:16px;border:1px solid #dce5ee;border-radius:16px"><b>Identificación</b><div>${esc(e.code||'—')} · ${esc(e.brand||'')} ${esc(e.model||'')}</div><div style="margin-top:5px;color:#66758a">${esc(e.location||'')}</div></div>
+   <p style="font-size:12px;color:#718096;margin:16px 4px 0">Vista pública de solo lectura. No permite editar, firmar ni acceder a otros registros del laboratorio.</p>
+  </div>
+ </section></main><style>.publicCard{padding:14px;border:1px solid #dce5ee;border-radius:15px;display:flex;flex-direction:column;gap:6px}.publicCard b{font-size:11px;text-transform:uppercase;color:#66758a}.publicCard span{font-weight:800}@media(max-width:520px){.publicCard{grid-column:span 2}}</style>`;
+}
+async function startPublicQrPortal(){
+ const key=PUBLIC_QR_PARAMS.get('equipment');
+ try{
+   let e=await getPublicEquipmentById(key);
+   // Legacy QR used equipment code instead of immutable document id. If id==code it works;
+   // otherwise it cannot safely enumerate the protected collection without authentication.
+   if(!e){document.querySelector('#app').innerHTML=`<main style="font-family:system-ui;padding:30px"><h2>Consulta QR no disponible</h2><p>Esta etiqueta fue generada con el identificador anterior (${esc(key)}). Ingrese al ERP y regenere una sola vez el QR del equipo para activar la consulta pública segura.</p></main>`;return;}
+   renderPublicQrEquipment(e);
+ }catch(err){
+   const denied=String(err?.code||err?.message||'').includes('permission');
+   document.querySelector('#app').innerHTML=`<main style="font-family:system-ui;padding:30px;max-width:700px;margin:auto"><h2>${denied?'Lectura pública aún no autorizada':'No se pudo consultar el equipo'}</h2><p>${denied?'El portal ya evita el inicio de sesión, pero las reglas actuales de Firestore todavía bloquean la lectura pública. Debe habilitarse únicamente GET del documento de equipo para esta vista, sin permitir escritura ni listado.':esc(err?.message||String(err))}</p></main>`;
+ }
+}
+
+if(PUBLIC_QR_MODE){startPublicQrPortal();}else try{observeAuth(async user=>{
  stopRealtime();currentUser=user;
  if(!user){if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}renderLogin();return}
  // Firebase puede restaurar una credencial de la pestaña. Solo se acepta si existe
@@ -4747,9 +4801,9 @@ try{observeAuth(async user=>{
   return;
  }
  await startRealtimeSession(user);
-})}catch(err){renderLogin(`No se pudo iniciar: ${err?.message||String(err)}`)}
-window.addEventListener('online',()=>{networkOnline=true;if(!currentUser)renderLogin();else if(!startupSyncing){showGlobalToast('Conexión restablecida. Firebase continúa sincronizando en tiempo real.','ok');realtimeRender()}});
-window.addEventListener('offline',()=>{networkOnline=false;if(currentUser){showGlobalToast('Sin conexión. Evite registrar cambios hasta recuperar Internet.','bad');realtimeRender()}else renderLogin()});
+})}catch(err){renderLogin(`No se pudo iniciar: ${err?.message||String(err)}`)}}
+window.addEventListener('online',()=>{networkOnline=true;if(PUBLIC_QR_MODE){startPublicQrPortal();return}if(!currentUser)renderLogin();else if(!startupSyncing){showGlobalToast('Conexión restablecida. Firebase continúa sincronizando en tiempo real.','ok');realtimeRender()}});
+window.addEventListener('offline',()=>{networkOnline=false;if(currentUser){showGlobalToast('Sin conexión. Evite registrar cambios hasta recuperar Internet.','bad');realtimeRender()}else if(!PUBLIC_QR_MODE)renderLogin()});
 
 // En desarrollo local cada ZIP usa el mismo origen localhost:5173.
 // Un Service Worker de una versión anterior puede seguir controlando el navegador
