@@ -48,6 +48,16 @@ export function normalizeEquipment(payload){
 
     metrologicalControlRequired: payload.metrologicalControlRequired !== false,
     qrUrl: clean(payload.qrUrl),
+    identificationLabel: {
+      qrGenerated: payload.identificationLabel?.qrGenerated === true || !!clean(payload.qrUrl),
+      qrTarget: clean(payload.identificationLabel?.qrTarget),
+      generatedAt: payload.identificationLabel?.generatedAt || null,
+      generatedBy: clean(payload.identificationLabel?.generatedBy),
+      installed: payload.identificationLabel?.installed === true,
+      installedAt: payload.identificationLabel?.installedAt || null,
+      installedBy: clean(payload.identificationLabel?.installedBy),
+      revision: Number(payload.identificationLabel?.revision || 1) || 1
+    },
 
     metrologicalCharacteristics: (payload.metrologicalCharacteristics || [])
       .map((x,i)=>({
