@@ -4690,7 +4690,7 @@ async function startRealtimeSession(user){
  const bg=(register,assign,label)=>{try{return register(data=>{assign(data);realtimeRender()},err=>console.warn(`${label} no disponible temporalmente:`,err))}catch(err){console.warn(`${label} no pudo iniciar:`,err);return ()=>{}}};
  try{
   if(FIELD_MOBILE_MODE){
-   // V1.1.149: el portal QR no depende del bootstrap completo del ERP.
+   // V1.1.150: el portal QR no depende del bootstrap completo del ERP.
    // Inventario confirma la conexión; dotaciones y movimientos cargan en paralelo y
    // actualizan la pantalla apenas responden. Así una colección lenta no bloquea el acceso.
    renderStartupSync('Conectando Control de Campo…','Validando sesión y disponibilidad de equipos.');
@@ -4706,7 +4706,7 @@ async function startRealtimeSession(user){
    return;
   }
 
-  // V1.1.149: se restaura el arranque estable/progresivo. El ERP abre cuando
+  // V1.1.150: se restaura el arranque estable/progresivo. El ERP abre cuando
   // Inventario responde; el resto de fuentes se sincroniza en segundo plano.
   // Ninguna colección auxiliar puede provocar un falso "timeout" global.
   renderStartupSync('Conectando con Firebase…','Validando inventario. Los demás módulos se sincronizarán en segundo plano.');
@@ -4790,18 +4790,19 @@ async function startPublicQrPortal(){
  }
 }
 
-if(PUBLIC_QR_MODE){startPublicQrPortal();}else try{observeAuth(async user=>{
- stopRealtime();currentUser=user;
- if(!user){if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}renderLogin();return}
- // Firebase puede restaurar una credencial de la pestaña. Solo se acepta si existe
- // una sesión activa de esta apertura y no han pasado 30 minutos sin actividad.
- if(!sessionIsFresh()){
-  try{await logout()}catch{};
-  renderLogin('Por seguridad, ingrese nuevamente sus credenciales.');
-  return;
- }
- await startRealtimeSession(user);
-})}catch(err){renderLogin(`No se pudo iniciar: ${err?.message||String(err)}`)}
+if(PUBLIC_QR_MODE){
+ startPublicQrPortal();
+}else{
+ try{observeAuth(async user=>{
+  stopRealtime();currentUser=user;
+  if(!user){if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}renderLogin();return}
+  if(!sessionIsFresh()){
+   try{await logout()}catch{}
+   renderLogin('Por seguridad, ingrese nuevamente sus credenciales.');
+   return;
+  }
+  await startRealtimeSession(user);
+ })}catch(err){renderLogin(`No se pudo iniciar: ${err?.message||String(err)}`)}
 }
 window.addEventListener('online',()=>{networkOnline=true;if(PUBLIC_QR_MODE){startPublicQrPortal();return}if(!currentUser)renderLogin();else if(!startupSyncing){showGlobalToast('Conexión restablecida. Firebase continúa sincronizando en tiempo real.','ok');realtimeRender()}});
 window.addEventListener('offline',()=>{networkOnline=false;if(currentUser){showGlobalToast('Sin conexión. Evite registrar cambios hasta recuperar Internet.','bad');realtimeRender()}else if(!PUBLIC_QR_MODE)renderLogin()});
