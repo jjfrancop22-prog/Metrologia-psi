@@ -48,8 +48,9 @@ export function publicEquipmentSnapshot(id,e={}){
     brand:clean(e.technical?.brand),
     model:clean(e.technical?.model),
     calibration,verification,maintenance,
+    correction:(()=>{const cc=e.correctionControl||{},app=String(cc.applicability||'POR_EVALUAR');if(app==='NO_APLICA')return {applicability:app,label:'NO APLICA'};if(app!=='APLICA')return {applicability:app,label:'POR EVALUAR'};const calDate=calibration.lastDate||'',review=String(cc.reviewedAt||'').slice(0,10),needsReview=!!(calDate&&(!review||calDate>review));return {applicability:app,label:needsReview?'REVISAR · NUEVA CALIBRACIÓN':'APLICA · CONSULTAR VALORES',type:clean(cc.type),applicationMethod:clean(cc.applicationMethod),source:clean(cc.source),values:(cc.values||[]).map(x=>({point:clean(x.point),referenceValue:clean(x.referenceValue),correction:clean(x.correction),unit:clean(x.unit)}))};})(),
     labelInstalled:e.identificationLabel?.installed===true,
-    publicSchemaVersion:2,
+    publicSchemaVersion:3,
     updatedAt:serverTimestamp()
   };
 }

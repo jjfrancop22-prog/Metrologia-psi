@@ -1,4 +1,4 @@
-const APP_VERSION = '1.1.136';
+const APP_VERSION = '1.1.156';
 const CACHE = `erp-metrologico-v${APP_VERSION}`;
 const APP_SHELL = ['/index.html', '/manifest.webmanifest'];
 
