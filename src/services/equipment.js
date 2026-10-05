@@ -4,6 +4,7 @@ import {
 import { db } from './firebase.js';
 import { writeAudit } from './audit.js';
 import { hashEquipmentSnapshot, equipmentDocumentSnapshot } from './documentFingerprint.js';
+import { publishPublicEquipmentStatus } from './publicEquipment.js';
 
 const clean = v => typeof v === 'string' ? v.trim() : (v ?? '');
 
@@ -168,6 +169,7 @@ export async function createEquipment(payload, user){
   const savedSnap = await getDocFromServer(ref);
   if(!savedSnap.exists()) throw new Error('Firebase no confirmó la creación del equipo.');
   const savedRecord={id:ref.id,...savedSnap.data()};
+  await publishPublicEquipmentStatus(ref.id,savedRecord);
   try{
     await writeAudit({actorUid:user.uid, action:'CREATE', module:'INVENTARIO_MAESTRO', entityId:ref.id, before:null, after:data});
   }catch(err){ console.warn('Equipo creado; auditoría pendiente/no disponible:',err); }
@@ -255,6 +257,7 @@ export async function updateEquipment(id, payload, user){
   const savedSnap = await getDocFromServer(ref);
   if(!savedSnap.exists()) throw new Error('Firebase no confirmó el registro después de guardar.');
   const savedRecord={id,...savedSnap.data()};
+  await publishPublicEquipmentStatus(id,savedRecord);
   const confirmedHash=await hashEquipmentSnapshot(savedRecord);
   if(confirmedHash!==result.afterHash) throw new Error('El servidor devolvió datos diferentes a los enviados. Reintente.');
 
@@ -267,6 +270,7 @@ export async function changeEquipmentStatus(id, status, reason, user){
   if(!snap.exists()) throw new Error('Equipo no encontrado.');
   const before=snap.data();
   await updateDoc(ref,{status,statusReason:clean(reason),updatedAt:serverTimestamp(),updatedBy:user.uid});
+  await publishPublicEquipmentStatus(id,{...before,status,statusReason:clean(reason)});
   await writeAudit({actorUid:user.uid,action:'STATUS_CHANGE',module:'INVENTARIO_MAESTRO',entityId:id,before:{status:before.status,statusReason:before.statusReason||''},after:{status,statusReason:clean(reason)}});
 }
 
@@ -304,6 +308,7 @@ export async function updateEquipmentCurrentControl(id,controlType,data,user,mod
    documentStatus={...ds,currentSnapshotHash:afterHash,workingRevision:working,pendingRevision:working,workingState:'BORRADOR_PENDIENTE_FIRMA',signatureState:'PENDIENTE_NUEVA_FIRMA',pendingChangeSections:Array.from(new Set([...(ds.pendingChangeSections||[]),'Control metrológico vigente'])),changedAfterSignatureAt:serverTimestamp()};
  }
  await updateDoc(ref,{currentControl:current,documentStatus,updatedAt:serverTimestamp(),updatedBy:user?.uid||''});
+ await publishPublicEquipmentStatus(id,{...before,currentControl:current});
  await writeAudit({actorUid:user?.uid||'',action:'CONTROL_EXECUTION',module:'CONTROL_METROLOGICO',entityId:id,before:before.currentControl?.[key]||null,after:current[key]});
 }
 

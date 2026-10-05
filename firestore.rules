@@ -23,6 +23,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+
+    match /publicEquipmentStatus/{equipmentCode} {
+      // QR público: permite leer un equipo concreto, nunca enumerar el inventario.
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if signedIn()
+        && request.resource.data.code == equipmentCode
+        && request.resource.data.keys().hasOnly([
+          'equipmentId','code','name','status','brand','model',
+          'calibration','verification','maintenance','labelInstalled',
+          'publicSchemaVersion','updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
     match /equipment/{equipmentId} {
       allow read, create, update: if signedIn();
       allow delete: if false;

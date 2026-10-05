@@ -7,7 +7,8 @@ const APP_VERSION = `V${packageInfo.version}`;
 const FIELD_MOBILE_MODE = location.pathname.replace(/\/+$/,'')==='/campo' || new URLSearchParams(location.search).get('campo')==='1';
 import { firebaseConfigured, firebaseInitError } from './services/firebase.js';
 import { login, logout, observeAuth, touchSession, sessionIsFresh, SESSION_IDLE_MINUTES } from './services/auth.js';
-import { observeEquipment, observeSystemStatus, heartbeat, getPublicEquipmentById } from './services/sync.js';
+import { observeEquipment, observeSystemStatus, heartbeat } from './services/sync.js';
+import { getPublicEquipmentStatus } from './services/publicEquipment.js';
 import { observeCatalogs, addCatalogItem } from './services/catalogs.js';
 import { createEquipment, updateEquipment, changeEquipmentStatus, updateEquipmentDocumentStatus, updateEquipmentCurrentControl } from './services/equipment.js';
 import { hashEquipmentSnapshot } from './services/documentFingerprint.js';
@@ -784,7 +785,7 @@ const toggle=()=>{togglePlan('cRequired','cMod','cInternal','cExternal','INTERNA
 function bindRemoveMet(){document.querySelectorAll('.removeMet').forEach(b=>b.onclick=()=>{if(document.querySelectorAll('.met-row').length>1)b.closest('tr').remove();else b.closest('tr').querySelectorAll('input').forEach(i=>i.value='')})}
 function togglePlan(checkId,modId,intId,extId,intV,extV,bothV){const req=document.querySelector('#'+checkId).checked,mod=document.querySelector('#'+modId).value;document.querySelector('#'+modId).disabled=!req;const a=document.querySelector('#'+intId),b=document.querySelector('#'+extId);a.classList.toggle('disabled',!req||![intV,bothV].includes(mod));b.classList.toggle('disabled',!req||![extV,bothV].includes(mod));a.querySelectorAll('input').forEach(x=>x.disabled=!req||![intV,bothV].includes(mod));b.querySelectorAll('input').forEach(x=>x.disabled=!req||![extV,bothV].includes(mod));}
 
-function smartEquipmentQrTarget(e){return `${window.location.origin}/?equipment=${encodeURIComponent(e.id||e.code)}&status=1`}
+function smartEquipmentQrTarget(e){return `${window.location.origin}/?equipment=${encodeURIComponent(e.code||e.id)}&status=1`}
 async function smartQrDataUrl(text){
  const mod=await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm');
  const QR=mod.default||mod;
@@ -4690,7 +4691,7 @@ async function startRealtimeSession(user){
  const bg=(register,assign,label)=>{try{return register(data=>{assign(data);realtimeRender()},err=>console.warn(`${label} no disponible temporalmente:`,err))}catch(err){console.warn(`${label} no pudo iniciar:`,err);return ()=>{}}};
  try{
   if(FIELD_MOBILE_MODE){
-   // V1.1.150: el portal QR no depende del bootstrap completo del ERP.
+   // V1.1.151: el portal QR no depende del bootstrap completo del ERP.
    // Inventario confirma la conexión; dotaciones y movimientos cargan en paralelo y
    // actualizan la pantalla apenas responden. Así una colección lenta no bloquea el acceso.
    renderStartupSync('Conectando Control de Campo…','Validando sesión y disponibilidad de equipos.');
@@ -4706,7 +4707,7 @@ async function startRealtimeSession(user){
    return;
   }
 
-  // V1.1.150: se restaura el arranque estable/progresivo. El ERP abre cuando
+  // V1.1.151: se restaura el arranque estable/progresivo. El ERP abre cuando
   // Inventario responde; el resto de fuentes se sincroniza en segundo plano.
   // Ninguna colección auxiliar puede provocar un falso "timeout" global.
   renderStartupSync('Conectando con Firebase…','Validando inventario. Los demás módulos se sincronizarán en segundo plano.');
@@ -4779,10 +4780,8 @@ function renderPublicQrEquipment(e){
 async function startPublicQrPortal(){
  const key=PUBLIC_QR_PARAMS.get('equipment');
  try{
-   let e=await getPublicEquipmentById(key);
-   // Legacy QR used equipment code instead of immutable document id. If id==code it works;
-   // otherwise it cannot safely enumerate the protected collection without authentication.
-   if(!e){document.querySelector('#app').innerHTML=`<main style="font-family:system-ui;padding:30px"><h2>Consulta QR no disponible</h2><p>Esta etiqueta fue generada con el identificador anterior (${esc(key)}). Ingrese al ERP y regenere una sola vez el QR del equipo para activar la consulta pública segura.</p></main>`;return;}
+   let e=await getPublicEquipmentStatus(key);
+   if(!e){document.querySelector('#app').innerHTML=`<main style="font-family:system-ui;padding:30px"><h2>Consulta QR no disponible</h2><p>El estado público de ${esc(key)} todavía no ha sido publicado. Abra y guarde una vez la ficha del equipo desde el ERP para crear su estado público seguro.</p></main>`;return;}
    renderPublicQrEquipment(e);
  }catch(err){
    const denied=String(err?.code||err?.message||'').includes('permission');
