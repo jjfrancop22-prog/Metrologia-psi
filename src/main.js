@@ -4762,8 +4762,11 @@ const PUBLIC_QR_PARAMS=new URLSearchParams(location.search);
 const PUBLIC_QR_MODE=PUBLIC_QR_PARAMS.get('status')==='1' && !!PUBLIC_QR_PARAMS.get('equipment');
 
 function publicControlSnapshot(e){
+ // La vista QR recibe el documento REDUCIDO publicEquipmentStatus, no la ficha maestra.
+ // En ese esquema calibration/verification/maintenance están en el nivel superior.
+ // Se conserva fallback a currentControl únicamente para compatibilidad con registros antiguos.
  const c=e?.currentControl||{};
- const cal=c.calibration||c.calibrationInternal||c.calibrationExternal||{};
+ const cal=e?.calibration||c.calibration||c.calibrationInternal||c.calibrationExternal||{};
  const next=String(cal.nextDate||cal.dueDate||'').slice(0,10);
  const last=String(cal.lastDate||cal.date||cal.completedAt||'').slice(0,10);
  const status=String(e?.status||'').toUpperCase();
@@ -4777,8 +4780,8 @@ function renderPublicQrEquipment(e){
  const app=document.querySelector('#app')||document.body;
  const s=publicControlSnapshot(e);
  const calState=String(s.cal?.status||s.cal?.result||'SIN REGISTRO');
- const ver=e?.currentControl?.verification||{};
- const maint=e?.currentControl?.maintenance||{};
+ const ver=e?.verification||e?.currentControl?.verification||{};
+ const maint=e?.maintenance||e?.currentControl?.maintenance||{};
  app.innerHTML=`<main style="min-height:100vh;background:#f4f8fc;padding:18px;font-family:Inter,system-ui,-apple-system,sans-serif;color:#1f2c3f">
  <section style="max-width:620px;margin:0 auto;background:white;border:1px solid #d9e4ef;border-radius:24px;overflow:hidden;box-shadow:0 12px 36px #17324d14">
   <header style="padding:24px;border-bottom:1px solid #e4ebf2"><small style="font-weight:800;color:#607086">LAB-PSI · CONSULTA METROLÓGICA</small><h1 style="margin:8px 0 4px;font-size:30px">${esc(e.code||'Equipo')} · ${esc(e.name||'')}</h1><div style="color:#66758a">Estado consultado directamente del ERP Metrológico</div></header>
