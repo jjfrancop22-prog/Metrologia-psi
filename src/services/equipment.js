@@ -149,7 +149,7 @@ export function normalizeEquipment(payload){
       reviewedBy: clean(payload.correctionControl?.reviewedBy),
       values: (payload.correctionControl?.values || []).map((x,i)=>({
         id: clean(x.id) || `corr-${i+1}`,
-        point: clean(x.point), indication: clean(x.indication), referenceValue: clean(x.referenceValue),
+        magnitude: clean(x.magnitude) || 'OTRA', point: clean(x.point), indication: clean(x.indication), referenceValue: clean(x.referenceValue),
         correction: clean(x.correction), unit: clean(x.unit), uncertainty: clean(x.uncertainty)
       })).filter(x=>x.point||x.indication||x.referenceValue||x.correction)
     },
