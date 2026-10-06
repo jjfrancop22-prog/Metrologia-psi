@@ -840,7 +840,7 @@ function printEquipmentSmartLabel(e){
  if(!w)return alert('El navegador bloqueó la vista de impresión.');
  const last=labelDateShort(cal.lastDate||cal.date||cal.completedAt),next=labelDateShort(cal.nextDate||cal.dueDate),result=String(cal.result||'SIN REGISTRO').toUpperCase();
  const calLine=result==='SIN REGISTRO'?'CAL · VER QR':`CAL · ${result}`,corr=correctionStatus(e),corrLine=String(e?.correctionControl?.applicability||'')==='APLICA'?`<div class="decision">⚠ CORRECCIÓN · ${esc(corr.label)} · VER QR</div>`:'';
- w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta ${esc(e.code)}</title><style>@page{size:50mm 30mm;margin:1.5mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#111}.label{width:47mm;height:27mm;border:1.2px solid #111;border-radius:2mm;padding:1.6mm;display:grid;grid-template-columns:1fr 16mm;gap:1.5mm;overflow:hidden}.brand{font-size:5.8px;font-weight:800;letter-spacing:.15px}.code{font-size:15px;font-weight:900;line-height:1;margin:1.2mm 0 .7mm}.name{font-size:6.8px;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal{margin-top:1.2mm;padding-top:1mm;border-top:.5px solid #777}.calstate{font-size:7.2px;font-weight:900;line-height:1.1}.dates{font-size:6.2px;font-weight:700;margin-top:.7mm;white-space:nowrap}.decision{font-size:6.2px;font-weight:900;margin-top:.8mm}.qrbox{display:flex;flex-direction:column;align-items:center;justify-content:center}.qr{width:15mm;height:15mm;object-fit:contain}.live{font-size:5.5px;font-weight:800;text-align:center;margin-top:.6mm;line-height:1.05}.noqr{width:15mm;height:15mm;border:.6px dashed #777;display:grid;place-items:center;font-size:6px;text-align:center}.note{font-size:4.7px;text-align:center;margin-top:.5mm}@media print{button{display:none}}button{margin-top:4mm}</style></head><body><div class="label"><div><div class="brand">LAB-PSI · CONTROL METROLÓGICO</div><div class="code">${esc(e.code)}</div><div class="name">${esc(e.name)}</div><div class="cal"><div class="calstate">${esc(calLine)}</div><div class="dates">${last} → ${next}</div><div class="decision">${esc(decision.label)} · ${esc(decision.detail)}</div>${corrLine}</div></div><div class="qrbox">${qr?`<img class="qr" src="${esc(qr)}">`:`<div class="noqr">QR<br>PENDIENTE</div>`}<div class="live">ESCANEAR<br>ESTADO EN VIVO</div><div class="note">Fechas impresas</div></div></div><button onclick="window.print()">Imprimir</button></body></html>`);w.document.close()
+ w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta ${esc(e.code)}</title><style>@page{size:62mm 32mm;margin:1mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#111}.label{width:60mm;height:30mm;border:1.2px solid #111;border-radius:2mm;padding:1.6mm;display:grid;grid-template-columns:minmax(0,1fr) 18mm;gap:1.8mm;overflow:hidden}.brand{font-size:5.8px;font-weight:800;letter-spacing:.15px}.code{font-size:15px;font-weight:900;line-height:1;margin:1.2mm 0 .7mm}.name{font-size:6.8px;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal{margin-top:1.2mm;padding-top:1mm;border-top:.5px solid #777}.calstate{font-size:7.2px;font-weight:900;line-height:1.1}.dates{font-size:6.2px;font-weight:700;margin-top:.7mm;white-space:nowrap}.decision{font-size:6.2px;font-weight:900;margin-top:.8mm}.qrbox{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:0;padding-top:.3mm}.qr{width:16.5mm;height:16.5mm;object-fit:contain;display:block}.live{font-size:5px;font-weight:800;text-align:center;margin-top:.5mm;line-height:1.05;white-space:nowrap}.noqr{width:16.5mm;height:16.5mm;border:.6px dashed #777;display:grid;place-items:center;font-size:6px;text-align:center}.note{font-size:4.2px;text-align:center;margin-top:.4mm;white-space:nowrap}@media print{button{display:none}}button{margin-top:4mm}</style></head><body><div class="label"><div><div class="brand">LAB-PSI · CONTROL METROLÓGICO</div><div class="code">${esc(e.code)}</div><div class="name">${esc(e.name)}</div><div class="cal"><div class="calstate">${esc(calLine)}</div><div class="dates">${last} → ${next}</div><div class="decision">${esc(decision.label)} · ${esc(decision.detail)}</div>${corrLine}</div></div><div class="qrbox">${qr?`<img class="qr" src="${esc(qr)}">`:`<div class="noqr">QR<br>PENDIENTE</div>`}<div class="live">ESCANEAR<br>ESTADO EN VIVO</div><div class="note">Fechas impresas</div></div></div><button onclick="window.print()">Imprimir</button></body></html>`);w.document.close()
 }
 
 function collectForm(existing){
@@ -4136,10 +4136,24 @@ async function readMaintenancePhotoList(files,max=2){
  for(const f of list)out.push(await compressMaintenancePhoto(f));
  return out;
 }
+const P12_SIGNER_URL='http://127.0.0.1:8787';
+async function p12SignerHealth(timeoutMs=1800){
+ const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),timeoutMs);
+ try{
+  const r=await fetch(`${P12_SIGNER_URL}/api/sign/health`,{method:'GET',cache:'no-store',signal:ctl.signal});
+  if(!r.ok)return {ok:false,message:`Motor respondió HTTP ${r.status}`};
+  const x=await r.json().catch(()=>({}));
+  return {ok:x?.ok===true,message:x?.ok===true?'Motor P12 disponible':'Respuesta del motor no válida'};
+ }catch(err){
+  return {ok:false,message:'Motor local de firma no disponible en esta computadora'};
+ }finally{clearTimeout(timer)}
+}
+function p12UnavailableMessage(){return 'El motor local P12 no está disponible. Ejecute npm run dev (o npm run dev:sign) en esta computadora, mantenga esa Terminal abierta y pulse Reintentar conexión.';}
 async function signGeneratedPdfBlob(blob,{p12,password,reason,name,equipmentCode,documentCode}){
  const pdfFile=new File([blob],`${equipmentCode||'equipo'}_INFORME.pdf`,{type:'application/pdf'});
  const fd=new FormData();fd.append('pdf',pdfFile);fd.append('p12',p12);fd.append('password',password);fd.append('reason',reason||'Aprobación de informe técnico');fd.append('name',name||currentUser?.email||'Aprobador LAB-PSI');fd.append('location','LAB-PSI, Ecuador');fd.append('equipmentCode',equipmentCode||'');fd.append('documentCode',documentCode||'PSI-PG0416');
- const r=await fetch('http://localhost:8787/api/sign/pdf',{method:'POST',body:fd});
+ const health=await p12SignerHealth(); if(!health.ok)throw new Error(p12UnavailableMessage());
+ const r=await fetch(`${P12_SIGNER_URL}/api/sign/pdf`,{method:'POST',body:fd});
  if(!r.ok){const x=await r.json().catch(()=>({}));throw new Error(x.error||'No fue posible aplicar la firma P12.');}
  return {blob:await r.blob(),hash:r.headers.get('X-Document-SHA256')||''};
 }
@@ -4910,12 +4924,25 @@ if('serviceWorker' in navigator){
 
 function openP12Signer(e){
  const code=esc(e?.code||'equipo');
- document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop open" id="p12Modal"><div class="modal"><div class="modal-head"><div><h2>Firmar ficha vigente con certificado P12</h2><p>${code} · generación + firma criptográfica en un solo paso</p></div><button class="close-btn" id="closeP12">×</button></div><div class="modal-body"><div class="info-banner"><b>Flujo dinámico:</b> el ERP genera automáticamente la ficha PDF con los datos vigentes del equipo y firma exactamente esa versión. No necesita generar ni seleccionar previamente un PDF.</div><div class="info-banner"><b>Seguridad:</b> el certificado y la contraseña se usan únicamente durante la firma. El ERP no los guarda en Firestore, Storage ni localStorage.</div><div class="form-grid"><div class="field span-2"><label>Certificado digital .p12 / .pfx *</label><input class="control" id="signP12File" type="file" accept=".p12,.pfx,application/x-pkcs12"></div><div class="field"><label>Contraseña del certificado *</label><input class="control" id="signP12Pass" type="password" autocomplete="new-password"></div><div class="field"><label>Motivo</label><input class="control" id="signReason" value="Aprobación de ficha de equipo ${code}"></div></div><div id="signStatus" class="derived-box"><b>Listo:</b> seleccione su certificado P12/PFX, escriba la contraseña y pulse <b>Firmar y generar PDF</b>.</div></div><div class="modal-foot"><button class="btn btn-secondary" id="cancelP12">Cancelar</button><button class="btn btn-primary" id="doP12Sign">Firmar y generar PDF</button></div></div></div>`);
+ document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop open" id="p12Modal"><div class="modal"><div class="modal-head"><div><h2>Firmar ficha vigente con certificado P12</h2><p>${code} · generación + firma criptográfica en un solo paso</p></div><button class="close-btn" id="closeP12">×</button></div><div class="modal-body"><div class="info-banner"><b>Flujo dinámico:</b> el ERP genera automáticamente la ficha PDF con los datos vigentes del equipo y firma exactamente esa versión. No necesita generar ni seleccionar previamente un PDF.</div><div class="info-banner"><b>Seguridad:</b> el certificado y la contraseña se usan únicamente durante la firma. El ERP no los guarda en Firestore, Storage ni localStorage.</div><div class="form-grid"><div class="field span-2"><label>Certificado digital .p12 / .pfx *</label><input class="control" id="signP12File" type="file" accept=".p12,.pfx,application/x-pkcs12"></div><div class="field"><label>Contraseña del certificado *</label><input class="control" id="signP12Pass" type="password" autocomplete="new-password"></div><div class="field"><label>Motivo</label><input class="control" id="signReason" value="Aprobación de ficha de equipo ${code}"></div></div><div id="signEngineStatus" class="derived-box"><b>Comprobando motor P12…</b></div><div id="signStatus" class="derived-box"><b>Preparación:</b> cuando el motor esté disponible, seleccione su certificado P12/PFX y escriba la contraseña.</div></div><div class="modal-foot"><button class="btn btn-secondary" id="retryP12Engine">Reintentar conexión</button><button class="btn btn-secondary" id="cancelP12">Cancelar</button><button class="btn btn-primary" id="doP12Sign" disabled>Firmar y generar PDF</button></div></div></div>`);
  const close=()=>document.getElementById('p12Modal')?.remove();
  document.getElementById('closeP12').onclick=close; document.getElementById('cancelP12').onclick=close;
+ const refreshP12Engine=async()=>{
+  const box=document.getElementById('signEngineStatus'), btn=document.getElementById('doP12Sign'), retry=document.getElementById('retryP12Engine');
+  if(!box||!btn)return false;
+  btn.disabled=true; if(retry)retry.disabled=true; box.innerHTML='<b>⏳ Comprobando motor P12…</b>';
+  const health=await p12SignerHealth();
+  if(!document.getElementById('p12Modal'))return false;
+  if(health.ok){box.innerHTML='<b>🟢 Motor P12 conectado</b> · listo para firmar en esta computadora.';btn.disabled=false;}
+  else{box.innerHTML=`<b>🔴 Motor P12 no disponible</b><br><small>${esc(p12UnavailableMessage())}</small>`;btn.disabled=true;}
+  if(retry)retry.disabled=false; return health.ok;
+ };
+ document.getElementById('retryP12Engine').onclick=refreshP12Engine;
+ refreshP12Engine();
  document.getElementById('doP12Sign').onclick=async()=>{
   const p12=document.getElementById('signP12File').files[0], password=document.getElementById('signP12Pass').value;
   const status=document.getElementById('signStatus');
+  const engine=await p12SignerHealth(); if(!engine.ok){status.innerHTML=`<b>No se inició la firma.</b> ${esc(p12UnavailableMessage())}`;await refreshP12Engine();return;}
   if(!p12||!password){status.innerHTML='<b>Faltan datos:</b> seleccione el certificado P12/PFX y escriba la contraseña.';return;}
   const btn=document.getElementById('doP12Sign'); btn.disabled=true; btn.textContent='Generando ficha…'; status.textContent='Generando PDF desde la ficha vigente del equipo…';
   try{
@@ -4923,7 +4950,7 @@ function openP12Signer(e){
    btn.textContent='Firmando…'; status.textContent='PDF generado. Aplicando firma criptográfica P12…';
    const pdf=new File([pdfBlob],`${e.code||'equipo'}_FICHA.pdf`,{type:'application/pdf'});
    const fd=new FormData(); fd.append('pdf',pdf); fd.append('p12',p12); fd.append('password',password); fd.append('reason',document.getElementById('signReason').value); fd.append('name',e?.approval?.approvedBy||currentUser?.email||'Aprobador LAB-PSI'); fd.append('location','LAB-PSI, Ecuador'); fd.append('equipmentCode',e?.code||''); fd.append('documentCode',e?.approval?.documentCode||'PG0404-06');
-   const r=await fetch('http://localhost:8787/api/sign/pdf',{method:'POST',body:fd});
+   const r=await fetch(`${P12_SIGNER_URL}/api/sign/pdf`,{method:'POST',body:fd});
    if(!r.ok){const x=await r.json().catch(()=>({}));throw new Error(x.error||'Error de firma');}
    const blob=await r.blob(), hash=r.headers.get('X-Document-SHA256')||'';
    const snapshotHash=await hashEquipmentSnapshot(e);
@@ -4943,7 +4970,7 @@ function openP12Signer(e){
    }catch(archiveErr){
     status.innerHTML=`<b>Firma P12 correcta y PDF descargado.</b><br><span style="color:#9a3412"><b>No se pudo archivar automáticamente en Firestore:</b> ${esc(archiveErr.message)}</span><br>El documento firmado no se perdió. Puede reintentar la operación; Firebase Storage ya no es necesario para las fichas y documentos de hasta 6 MB.`;
    }
-  }catch(err){status.innerHTML=`<b>No se pudo generar o firmar.</b> ${esc(err.message)}<br><small>Compruebe que ejecutó <code>npm run dev</code>; este comando inicia la web y el motor local de firma.</small>`;}
+  }catch(err){const network=/failed to fetch|networkerror|load failed/i.test(String(err?.message||''));status.innerHTML=network?`<b>No se pudo iniciar la firma.</b> ${esc(p12UnavailableMessage())}`:`<b>No se pudo generar o firmar.</b> ${esc(err.message)}`; if(network)refreshP12Engine();}
   finally{btn.disabled=false;btn.textContent='Firmar y generar PDF';document.getElementById('signP12Pass').value='';}
  };
 }

@@ -1,0 +1,15 @@
+{
+  "name": "lab-psi-p12-agent",
+  "version": "1.1.160",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "multer": "^2.0.2",
+    "@signpdf/signpdf": "^3.3.0",
+    "@signpdf/signer-p12": "^3.3.0",
+    "@signpdf/placeholder-pdf-lib": "^3.3.0",
+    "pdf-lib": "^1.17.1"
+  }
+}

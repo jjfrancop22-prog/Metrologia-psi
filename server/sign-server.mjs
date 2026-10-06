@@ -16,7 +16,7 @@ const signpdf = (signpdfImport && typeof signpdfImport.sign === 'function')
 const app=express();
 app.use(cors({origin:true}));
 const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:20*1024*1024}});
-app.get('/api/sign/health',(_,res)=>res.json({ok:true,service:'P12 signer',version:'0.3.6'}));
+app.get('/api/sign/health',(_,res)=>res.json({ok:true,service:'P12 signer',version:'0.3.7',mode:'local-agent'}));
 app.post('/api/sign/pdf',upload.fields([{name:'pdf',maxCount:1},{name:'p12',maxCount:1}]),async(req,res)=>{
   try{
     const pdf=req.files?.pdf?.[0]?.buffer, p12=req.files?.p12?.[0]?.buffer;
@@ -40,4 +40,4 @@ app.post('/api/sign/pdf',upload.fields([{name:'pdf',maxCount:1},{name:'p12',maxC
     res.status(400).json({error: passwordHint ? 'No fue posible abrir o firmar con el certificado P12/PFX. Verifique la contraseña y el archivo.' : 'No fue posible completar la firma digital.',detail});
   }
 });
-app.listen(8787,()=>console.log('Motor de firma P12 listo en http://localhost:8787'));
+app.listen(8787,'127.0.0.1',()=>console.log('Motor de firma P12 LAB-PSI listo en http://127.0.0.1:8787'));
