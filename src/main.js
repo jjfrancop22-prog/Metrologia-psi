@@ -841,7 +841,10 @@ function equipmentUseDecision(e){
  if(next&&['CONFORME','VIGENTE','APTO'].includes(result))return {label:'VIGENTE ✓',detail:`Hasta ${labelDateShort(next)}`,className:'ok'};
  return {label:'VER QR',detail:'Consultar estado vigente',className:'check'}
 }
-function printEquipmentSmartLabel(e){
+async function printEquipmentSmartLabel(e){
+ // V1.1.165: antes de abrir/imprimir la etiqueta, refrescar el documento público QR
+ // con el mismo motor multiparámetro que alimenta la etiqueta.
+ try{await publishDerivedPublicEquipment(e)}catch(err){console.warn('QR público no pudo refrescarse antes de imprimir:',err)}
  const multi=calibrationMethodAggregate(e),decision=multi&&multi.counts.VENCIDA?{label:'RESTRINGIDO',detail:'VER QR · detalle por parámetro',className:'check'}:equipmentUseDecision(e),cal=labelCalibrationControl(e),qr=e.qrUrl||'',w=window.open('','_blank','width=620,height=520');
  if(!w)return alert('El navegador bloqueó la vista de impresión.');
  const last=labelDateShort(cal.lastDate||cal.date||cal.completedAt),next=labelDateShort(cal.nextDate||cal.dueDate),result=String(cal.result||'SIN REGISTRO').toUpperCase();
@@ -4858,9 +4861,7 @@ function renderPublicQrEquipment(e){
    <div style="padding:20px;border-radius:18px;background:${s.tone==='bad'?'#fff0f0':s.tone==='warn'?'#fff8e8':'#edf9f0'};border:1px solid ${s.tone==='bad'?'#efb6b6':s.tone==='warn'?'#ecd392':'#bfe4c8'}"><div style="font-size:12px;font-weight:800;color:#66758a">CONDICIÓN DE USO</div><div style="font-size:28px;font-weight:900;margin-top:5px">${esc(s.decision)}</div><div style="margin-top:6px">${esc(s.reason)}</div></div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
     <div class="publicCard"><b>Estado del equipo</b><span>${esc(s.status||'—')}</span></div>
-    <div class="publicCard"><b>Calibración</b><span>${esc(calState)}</span></div>
-    <div class="publicCard"><b>Última calibración</b><span>${esc(s.last||'—')}</span></div>
-    <div class="publicCard"><b>Vigente hasta</b><span>${esc(s.next||'—')}</span></div>
+    ${s.methods.length>1?`<div class="publicCard"><b>Calibración</b><span>MULTIPARÁMETRO · VER DETALLE</span></div>`:`<div class="publicCard"><b>Calibración</b><span>${esc(calState)}</span></div><div class="publicCard"><b>Última calibración</b><span>${esc(s.last||'—')}</span></div><div class="publicCard"><b>Vigente hasta</b><span>${esc(s.next||'—')}</span></div>`}
     <div class="publicCard"><b>Verificación</b><span>${esc(ver.status||ver.result||'SIN REGISTRO')}</span></div>
     <div class="publicCard"><b>Mantenimiento</b><span>${esc(maint.status||maint.result||'SIN REGISTRO')}</span></div>
     <div class="publicCard"><b>Corrección / referencia</b><span>${esc(e?.correction?.label||'POR EVALUAR')}</span></div>
