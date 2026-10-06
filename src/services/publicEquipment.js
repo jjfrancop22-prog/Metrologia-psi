@@ -48,9 +48,10 @@ export function publicEquipmentSnapshot(id,e={}){
     brand:clean(e.technical?.brand),
     model:clean(e.technical?.model),
     calibration,verification,maintenance,
+    calibrationMethods:(e.publicCalibrationMethods||[]).map(x=>({name:clean(x.name),frequencyMonths:Number(x.frequencyMonths)||0,responsible:clean(x.responsible),profile:clean(x.profile),lastDate:date(x.lastDate),nextDate:date(x.nextDate),result:clean(x.result)||'SIN REGISTRO',status:clean(x.status)||'SIN REGISTRO'})).filter(x=>x.name),
     correction:(()=>{const cc=e.correctionControl||{},app=String(cc.applicability||'POR_EVALUAR');if(app==='NO_APLICA')return {applicability:app,label:'NO APLICA'};if(app!=='APLICA')return {applicability:app,label:'POR EVALUAR'};const calDate=calibration.lastDate||'',review=String(cc.reviewedAt||'').slice(0,10),needsReview=!!(calDate&&(!review||calDate>review));return {applicability:app,label:needsReview?'REVISAR · NUEVA CALIBRACIÓN':'APLICA · CONSULTAR VALORES',type:clean(cc.type),applicationMethod:clean(cc.applicationMethod),source:clean(cc.source),values:(cc.values||[]).map(x=>({point:clean(x.point),referenceValue:clean(x.referenceValue),correction:clean(x.correction),unit:clean(x.unit)}))};})(),
     labelInstalled:e.identificationLabel?.installed===true,
-    publicSchemaVersion:3,
+    publicSchemaVersion:4,
     updatedAt:serverTimestamp()
   };
 }

@@ -842,11 +842,11 @@ function equipmentUseDecision(e){
  return {label:'VER QR',detail:'Consultar estado vigente',className:'check'}
 }
 function printEquipmentSmartLabel(e){
- const decision=equipmentUseDecision(e),cal=labelCalibrationControl(e),qr=e.qrUrl||'',w=window.open('','_blank','width=620,height=520');
+ const multi=calibrationMethodAggregate(e),decision=multi&&multi.counts.VENCIDA?{label:'RESTRINGIDO',detail:'VER QR · detalle por parámetro',className:'check'}:equipmentUseDecision(e),cal=labelCalibrationControl(e),qr=e.qrUrl||'',w=window.open('','_blank','width=620,height=520');
  if(!w)return alert('El navegador bloqueó la vista de impresión.');
  const last=labelDateShort(cal.lastDate||cal.date||cal.completedAt),next=labelDateShort(cal.nextDate||cal.dueDate),result=String(cal.result||'SIN REGISTRO').toUpperCase();
- const calLine=result==='SIN REGISTRO'?'CAL · VER QR':`CAL · ${result}`,corr=correctionStatus(e),corrLine=String(e?.correctionControl?.applicability||'')==='APLICA'?`<div class="decision">⚠ CORRECCIÓN · ${esc(corr.label)} · VER QR</div>`:'';
- w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta ${esc(e.code)}</title><style>@page{size:62mm 32mm;margin:1mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#111}.label{width:60mm;height:30mm;border:1.2px solid #111;border-radius:2mm;padding:1.6mm;display:grid;grid-template-columns:minmax(0,1fr) 18mm;gap:1.8mm;overflow:hidden}.brand{font-size:5.8px;font-weight:800;letter-spacing:.15px}.code{font-size:15px;font-weight:900;line-height:1;margin:1.2mm 0 .7mm}.name{font-size:6.8px;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal{margin-top:1.2mm;padding-top:1mm;border-top:.5px solid #777}.calstate{font-size:7.2px;font-weight:900;line-height:1.1}.dates{font-size:6.2px;font-weight:700;margin-top:.7mm;white-space:nowrap}.decision{font-size:6.2px;font-weight:900;margin-top:.8mm}.qrbox{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:0;padding-top:.3mm}.qr{width:16.5mm;height:16.5mm;object-fit:contain;display:block}.live{font-size:5px;font-weight:800;text-align:center;margin-top:.5mm;line-height:1.05;white-space:nowrap}.noqr{width:16.5mm;height:16.5mm;border:.6px dashed #777;display:grid;place-items:center;font-size:6px;text-align:center}.note{font-size:4.2px;text-align:center;margin-top:.4mm;white-space:nowrap}@media print{button{display:none}}button{margin-top:4mm}</style></head><body><div class="label"><div><div class="brand">LAB-PSI · CONTROL METROLÓGICO</div><div class="code">${esc(e.code)}</div><div class="name">${esc(e.name)}</div><div class="cal"><div class="calstate">${esc(calLine)}</div><div class="dates">${last} → ${next}</div><div class="decision">${esc(decision.label)} · ${esc(decision.detail)}</div>${corrLine}</div></div><div class="qrbox">${qr?`<img class="qr" src="${esc(qr)}">`:`<div class="noqr">QR<br>PENDIENTE</div>`}<div class="live">ESCANEAR<br>ESTADO EN VIVO</div><div class="note">Fechas impresas</div></div></div><button onclick="window.print()">Imprimir</button></body></html>`);w.document.close()
+ const calLine=multi?`CAL · MULTIPARÁMETRO`:result==='SIN REGISTRO'?'CAL · VER QR':`CAL · ${result}`,datesLine=multi?`${multi.counts.VENCIDA} VENCIDA · ${multi.counts.PROXIMA} PRÓXIMA · ${multi.counts.VIGENTE} VIGENTES`:`${last} → ${next}`,corr=correctionStatus(e),corrLine=String(e?.correctionControl?.applicability||'')==='APLICA'?`<div class="decision">⚠ CORRECCIÓN · ${esc(corr.label)} · VER QR</div>`:'';
+ w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta ${esc(e.code)}</title><style>@page{size:62mm 32mm;margin:1mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#111}.label{width:60mm;height:30mm;border:1.2px solid #111;border-radius:2mm;padding:1.6mm;display:grid;grid-template-columns:minmax(0,1fr) 18mm;gap:1.8mm;overflow:hidden}.brand{font-size:5.8px;font-weight:800;letter-spacing:.15px}.code{font-size:15px;font-weight:900;line-height:1;margin:1.2mm 0 .7mm}.name{font-size:6.8px;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal{margin-top:1.2mm;padding-top:1mm;border-top:.5px solid #777}.calstate{font-size:7.2px;font-weight:900;line-height:1.1}.dates{font-size:6.2px;font-weight:700;margin-top:.7mm;white-space:nowrap}.decision{font-size:6.2px;font-weight:900;margin-top:.8mm}.qrbox{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:0;padding-top:.3mm}.qr{width:16.5mm;height:16.5mm;object-fit:contain;display:block}.live{font-size:5px;font-weight:800;text-align:center;margin-top:.5mm;line-height:1.05;white-space:nowrap}.noqr{width:16.5mm;height:16.5mm;border:.6px dashed #777;display:grid;place-items:center;font-size:6px;text-align:center}.note{font-size:4.2px;text-align:center;margin-top:.4mm;white-space:nowrap}@media print{button{display:none}}button{margin-top:4mm}</style></head><body><div class="label"><div><div class="brand">LAB-PSI · CONTROL METROLÓGICO</div><div class="code">${esc(e.code)}</div><div class="name">${esc(e.name)}</div><div class="cal"><div class="calstate">${esc(calLine)}</div><div class="dates">${esc(datesLine)}</div><div class="decision">${esc(decision.label)} · ${esc(decision.detail)}</div>${corrLine}</div></div><div class="qrbox">${qr?`<img class="qr" src="${esc(qr)}">`:`<div class="noqr">QR<br>PENDIENTE</div>`}<div class="live">ESCANEAR<br>ESTADO EN VIVO</div><div class="note">Fechas impresas</div></div></div><button onclick="window.print()">Imprimir</button></body></html>`);w.document.close()
 }
 
 function collectForm(existing){
@@ -1174,9 +1174,20 @@ function publicControlFromProgram(e,type){
  const result=c.result||ev.result||i?.evidence?.notes||((i?.lastDate||i?.evidence)?'REGISTRADO':'SIN REGISTRO');
  return {result:String(result||'SIN REGISTRO'),lastDate:c.lastDate||i?.lastDate||ev.date||i?.evidence?.issueDate||'',nextDate:c.nextDate||i?.dueDate||ev.nextDate||i?.evidence?.expiryDate||''};
 }
+function calibrationMethodStatusRows(e){
+ const methods=e?.plans?.calibration?.internal?.methods||[];
+ if(methods.length<2)return [];
+ let items=[];try{items=buildProgramItems().filter(i=>i.equipment?.id===e.id&&i.type==='CALIBRATION'&&i.modality==='INTERNAL')}catch(_){items=[]}
+ return methods.map(m=>{const scope=`CAL_METHOD:${m.id||normalizeKey(m.name)}`,i=items.find(x=>String(x.scopeKey||'')===scope)||items.find(x=>String(x.methodName||'').trim().toLowerCase()===String(m.name||'').trim().toLowerCase()),ev=i?.evidence?.generatedData||{};return {name:m.name,frequencyMonths:m.frequencyMonths||0,responsible:m.responsible||e.plans?.calibration?.internal?.responsible||'',profile:m.profile||'',lastDate:i?.lastDate||ev.date||i?.evidence?.issueDate||'',nextDate:i?.dueDate||ev.nextDate||i?.evidence?.expiryDate||'',result:ev.result||i?.evidence?.notes||((i?.lastDate||i?.evidence)?'REGISTRADO':'SIN REGISTRO'),status:i?.status||'SIN_REGISTRO'}})
+}
+function calibrationMethodAggregate(e){
+ const rows=calibrationMethodStatusRows(e);if(!rows.length)return null;
+ const counts={VENCIDA:0,PROXIMA:0,VIGENTE:0,OTRA:0};rows.forEach(r=>{const k=String(r.status||'').toUpperCase();if(k==='VENCIDA'||k==='HOY')counts.VENCIDA++;else if(k==='PROXIMA')counts.PROXIMA++;else if(k==='VIGENTE'||k==='PROGRAMADA')counts.VIGENTE++;else counts.OTRA++});return {rows,counts};
+}
 async function publishDerivedPublicEquipment(e){
  if(!e?.id||!e?.code)return;
- const derived={...e,currentControl:{...(e.currentControl||{}),calibration:publicControlFromProgram(e,'CALIBRATION'),verification:publicControlFromProgram(e,'VERIFICATION'),maintenance:publicControlFromProgram(e,'MAINTENANCE')}};
+ const publicCalibrationMethods=calibrationMethodStatusRows(e);
+ const derived={...e,publicCalibrationMethods,currentControl:{...(e.currentControl||{}),calibration:publicControlFromProgram(e,'CALIBRATION'),verification:publicControlFromProgram(e,'VERIFICATION'),maintenance:publicControlFromProgram(e,'MAINTENANCE')}};
  await publishPublicEquipmentStatus(e.id,derived);
 }
 
@@ -4822,12 +4833,17 @@ function publicControlSnapshot(e){
  const cal=e?.calibration||c.calibration||c.calibrationInternal||c.calibrationExternal||{};
  const next=String(cal.nextDate||cal.dueDate||'').slice(0,10);
  const last=String(cal.lastDate||cal.date||cal.completedAt||'').slice(0,10);
- const status=String(e?.status||'').toUpperCase();
+ const status=String(e?.status||'').toUpperCase(),methods=Array.isArray(e?.calibrationMethods)?e.calibrationMethods:[];
  let decision='APTO PARA USO',tone='ok',reason='Estado activo y sin vencimiento detectado.';
- if(['FUERA DE SERVICIO','RESTRINGIDO','BAJA'].includes(status)){decision='NO USAR';tone='bad';reason=`Estado del equipo: ${status}`;}
+ const expired=methods.filter(x=>['VENCIDA','HOY'].includes(String(x.status||'').toUpperCase()));
+ const upcoming=methods.filter(x=>String(x.status||'').toUpperCase()==='PROXIMA');
+ if(['FUERA DE SERVICIO','BAJA'].includes(status)){decision='NO USAR';tone='bad';reason=`Estado del equipo: ${status}`;}
+ else if(methods.length>1&&expired.length){decision='USO RESTRINGIDO';tone='warn';reason=`${expired.length} parámetro(s) con calibración vencida. No usar esos parámetros hasta recalibrar.`;}
+ else if(status==='RESTRINGIDO'){decision='USO RESTRINGIDO';tone='warn';reason='Estado del equipo: RESTRINGIDO';}
+ else if(methods.length>1&&upcoming.length){decision='APTO · ATENCIÓN';tone='warn';reason=`${upcoming.length} parámetro(s) próximo(s) a vencer. Consulte el detalle.`;}
  else if(next){const d=new Date(next+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);if(!Number.isNaN(d.getTime())&&d<t){decision='NO USAR';tone='bad';reason=`Calibración vencida el ${next}`;}}
  else {decision='ESTADO POR VERIFICAR';tone='warn';reason='No existe una fecha de vigencia suficiente para decidir automáticamente.';}
- return {cal,last,next,status,decision,tone,reason};
+ return {cal,last,next,status,decision,tone,reason,methods};
 }
 function renderPublicQrEquipment(e){
  const app=document.querySelector('#app')||document.body;
@@ -4849,6 +4865,7 @@ function renderPublicQrEquipment(e){
     <div class="publicCard"><b>Mantenimiento</b><span>${esc(maint.status||maint.result||'SIN REGISTRO')}</span></div>
     <div class="publicCard"><b>Corrección / referencia</b><span>${esc(e?.correction?.label||'POR EVALUAR')}</span></div>
    </div>
+   ${s.methods.length>1?`<div style="margin-top:14px;border:1px solid #dce5ee;border-radius:16px;overflow:hidden"><div style="padding:14px 16px;background:#f5f9fd"><b>Calibraciones internas por método / parámetro</b><div style="font-size:12px;color:#66758a;margin-top:3px">Detalle en vivo desde el ERP · solo lectura</div></div>${s.methods.map(m=>{const st=String(m.status||'SIN REGISTRO').toUpperCase(),bg=['VENCIDA','HOY'].includes(st)?'#fff0f0':st==='PROXIMA'?'#fff8e8':st==='VIGENTE'?'#edf9f0':'#f5f7fa',fg=['VENCIDA','HOY'].includes(st)?'#b42318':st==='PROXIMA'?'#8a5a00':st==='VIGENTE'?'#08783e':'#5f6b7a';return `<div style="padding:13px 16px;border-top:1px solid #e5ebf1;display:grid;grid-template-columns:minmax(120px,1.4fr) 1fr auto;gap:10px;align-items:center"><div><b>${esc(m.name)}</b><div style="font-size:11px;color:#718096;margin-top:3px">${esc(m.profile||'Calibración interna')}${m.frequencyMonths?` · ${m.frequencyMonths} meses`:''}</div></div><div style="font-size:12px"><div>Última: <b>${esc(m.lastDate||'—')}</b></div><div>Próxima: <b>${esc(m.nextDate||'—')}</b></div></div><span style="padding:6px 9px;border-radius:999px;background:${bg};color:${fg};font-size:11px;font-weight:900">${esc(st.replaceAll('_',' '))}</span></div>`}).join('')}</div>`:''}
    ${e?.correction?.applicability==='APLICA'?`<div style="margin-top:14px;padding:16px;border:1px solid #e5c56e;background:#fff9e8;border-radius:16px"><b>⚠ Corrección / valor de referencia aplicable</b><div style="margin-top:6px">${esc(e.correction.label||'APLICA')} · ${esc((e.correction.applicationMethod||'').replaceAll('_',' '))}</div>${e.correction.source?`<div style="margin-top:4px;color:#66758a">Fuente: ${esc(e.correction.source)}</div>`:''}${(e.correction.values||[]).length?`<div style="margin-top:10px">${e.correction.values.map(x=>`<div style="padding:7px 0;border-top:1px solid #eadba8"><b>${esc(x.point||'Punto')}</b> · Ref. ${esc(x.referenceValue||'—')} · Corrección/factor <b>${esc(x.correction||'—')} ${esc(x.unit||'')}</b></div>`).join('')}</div>`:''}</div>`:''}
    <div style="margin-top:14px;padding:16px;border:1px solid #dce5ee;border-radius:16px"><b>Identificación</b><div>${esc(e.code||'—')} · ${esc(e.brand||'')} ${esc(e.model||'')}</div><div style="margin-top:5px;color:#66758a">${esc(e.location||'')}</div></div>
    <p style="font-size:12px;color:#718096;margin:16px 4px 0">Vista pública de solo lectura. No permite editar, firmar ni acceder a otros registros del laboratorio.</p>
