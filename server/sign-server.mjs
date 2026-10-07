@@ -6,6 +6,7 @@ import { pdflibAddPlaceholder } from '@signpdf/placeholder-pdf-lib';
 import { P12Signer } from '@signpdf/signer-p12';
 import signpdfImport from '@signpdf/signpdf';
 import crypto from 'node:crypto';
+import http from 'node:http';
 
 const signpdf = (signpdfImport && typeof signpdfImport.sign === 'function')
   ? signpdfImport
@@ -40,4 +41,53 @@ app.post('/api/sign/pdf',upload.fields([{name:'pdf',maxCount:1},{name:'p12',maxC
     res.status(400).json({error: passwordHint ? 'No fue posible abrir o firmar con el certificado P12/PFX. Verifique la contraseña y el archivo.' : 'No fue posible completar la firma digital.',detail});
   }
 });
-app.listen(8787,'127.0.0.1',()=>console.log('Motor de firma P12 LAB-PSI listo en http://127.0.0.1:8787'));
+const HOST = process.env.P12_HOST || '127.0.0.1';
+const PORT = Number(process.env.P12_PORT || 8787);
+
+// Servidor HTTP explícito: una sola llamada listen().
+// Si 8787 ya está ocupado por OTRO agente P12 válido, no tumbamos Vite:
+// este proceso queda como supervisor para permitir seguir trabajando.
+const server = http.createServer(app);
+let supervisingExistingAgent = false;
+
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 66_000;
+server.requestTimeout = 120_000;
+
+server.once('error', async (err) => {
+  if (err?.code === 'EADDRINUSE') {
+    try {
+      const response = await fetch(`http://${HOST}:${PORT}/api/sign/health`, { signal: AbortSignal.timeout(1500) });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data?.ok === true) {
+        supervisingExistingAgent = true;
+        console.log(`[P12] El puerto ${PORT} ya tiene un agente P12 válido activo.`);
+        console.log('[P12] Se reutilizará ese agente. WEB puede continuar normalmente.');
+        // Mantiene vivo este proceso de concurrently sin abrir un segundo puerto.
+        setInterval(() => {}, 60_000);
+        return;
+      }
+    } catch {}
+    console.error(`[P12] El puerto ${PORT} está ocupado por otro proceso que NO es el agente P12.`);
+    console.error(`[P12] Revise con: lsof -nP -iTCP:${PORT} -sTCP:LISTEN`);
+  } else {
+    console.error('[P12] Error del servidor:', err?.code || '', err?.message || err);
+  }
+  process.exit(1);
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(`Motor de firma P12 LAB-PSI listo en http://${HOST}:${PORT}`);
+  console.log('Agente P12 activo. Mantenga esta Terminal abierta mientras firma.');
+});
+
+const shutdown = (signal) => {
+  console.log(`[P12] ${signal}: cerrando agente de firma...`);
+  if (supervisingExistingAgent || !server.listening) process.exit(0);
+  server.close((err) => process.exit(err ? 1 : 0));
+  setTimeout(() => process.exit(1), 5_000).unref();
+};
+
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+

@@ -33,7 +33,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'equipmentId','code','name','status','brand','model',
           'calibration','verification','maintenance','correction','labelInstalled',
-          'publicSchemaVersion','updatedAt'
+          'publicSchemaVersion','updatedAt','controlModalities','calibrationMethods'
         ]);
       allow delete: if false;
     }

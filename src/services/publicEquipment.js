@@ -40,6 +40,13 @@ export function publicEquipmentSnapshot(id,e={}){
   const calibration=control(c.calibration,c.calibrationInternal,c.calibrationExternal);
   const verification=control(c.verification,c.verificationInternal,c.verificationExternal);
   const maintenance=control(c.maintenance,c.maintenanceInternal,c.maintenanceExternal);
+  // publicCalibrationMethods solo existe cuando el publicador derivado ya resolvió
+  // el programa metrológico. Una actualización normal de la ficha NO debe enviar []
+  // porque setDoc(...,{merge:true}) borraría accidentalmente el detalle multiparámetro.
+  const hasCalibrationMethods=Array.isArray(e.publicCalibrationMethods);
+  const calibrationMethods=hasCalibrationMethods
+    ? e.publicCalibrationMethods.map(x=>({name:clean(x.name),frequencyMonths:Number(x.frequencyMonths)||0,responsible:clean(x.responsible),profile:clean(x.profile),lastDate:date(x.lastDate),nextDate:date(x.nextDate),result:clean(x.result)||'SIN REGISTRO',status:clean(x.status)||'SIN REGISTRO'})).filter(x=>x.name)
+    : null;
   return {
     equipmentId:String(id||''),
     code:clean(e.code).toUpperCase(),
@@ -48,18 +55,34 @@ export function publicEquipmentSnapshot(id,e={}){
     brand:clean(e.technical?.brand),
     model:clean(e.technical?.model),
     calibration,verification,maintenance,
-    calibrationMethods:(e.publicCalibrationMethods||[]).map(x=>({name:clean(x.name),frequencyMonths:Number(x.frequencyMonths)||0,responsible:clean(x.responsible),profile:clean(x.profile),lastDate:date(x.lastDate),nextDate:date(x.nextDate),result:clean(x.result)||'SIN REGISTRO',status:clean(x.status)||'SIN REGISTRO'})).filter(x=>x.name),
+    ...(e.publicModalities?{controlModalities:e.publicModalities}:{}),
+    ...(hasCalibrationMethods?{calibrationMethods}:{}),
     correction:(()=>{const cc=e.correctionControl||{},app=String(cc.applicability||'POR_EVALUAR');if(app==='NO_APLICA')return {applicability:app,label:'NO APLICA'};if(app!=='APLICA')return {applicability:app,label:'POR EVALUAR'};const calDate=calibration.lastDate||'',review=String(cc.reviewedAt||'').slice(0,10),needsReview=!!(calDate&&(!review||calDate>review));return {applicability:app,label:needsReview?'REVISAR · NUEVA CALIBRACIÓN':'APLICA · CONSULTAR VALORES',type:clean(cc.type),applicationMethod:clean(cc.applicationMethod),source:clean(cc.source),values:(cc.values||[]).map(x=>({point:clean(x.point),referenceValue:clean(x.referenceValue),correction:clean(x.correction),unit:clean(x.unit)}))};})(),
     labelInstalled:e.identificationLabel?.installed===true,
-    publicSchemaVersion:5,
+    publicSchemaVersion:7,
     updatedAt:serverTimestamp()
   };
 }
 export async function publishPublicEquipmentStatus(id,e={}){
   const code=clean(e.code).toUpperCase();
   if(!id||!code) return;
-  await setDoc(doc(db,'publicEquipmentStatus',code),publicEquipmentSnapshot(id,e),{merge:true});
+  const ref=doc(db,'publicEquipmentStatus',code);
+  const payload=publicEquipmentSnapshot(id,e);
+  // V1.1.172: nunca degradar un QR multiparámetro a una sola calibración por una
+  // publicación parcial. Si el cálculo derivado llega temporalmente sin filas,
+  // conservar el último detalle público válido.
+  if(Array.isArray(payload.calibrationMethods)&&payload.calibrationMethods.length===0){
+    try{
+      const previous=await getDoc(ref);
+      const old=previous.exists()?previous.data():null;
+      if(Array.isArray(old?.calibrationMethods)&&old.calibrationMethods.length>0){
+        delete payload.calibrationMethods;
+      }
+    }catch(_){ delete payload.calibrationMethods; }
+  }
+  await setDoc(ref,payload,{merge:true});
 }
+
 export async function getPublicEquipmentStatus(key){
   if(!key) return null;
   const snap=await getDoc(doc(db,'publicEquipmentStatus',String(key).toUpperCase()));

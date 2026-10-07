@@ -1,10 +1,10 @@
 {
   "name": "erp-metrologico-nextgen",
-  "version": "1.1.165",
+  "version": "1.1.209",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k \"vite --host 0.0.0.0\" \"node server/sign-server.mjs\"",
+    "dev": "concurrently --kill-others --names WEB,P12 \"vite --host 0.0.0.0\" \"node server/sign-server.mjs\"",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "dev:web": "vite --host 0.0.0.0",
